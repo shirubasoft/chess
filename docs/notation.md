@@ -28,6 +28,36 @@ legality in the supplied position. `Uci.Format(position, move)` encodes a domain
 request; callers supply a legal move when exporting play. Null moves and
 Chess960 castling are outside standard board play.
 
+## SAN moves
+
+`San.Parse(position, text)` resolves SAN against the legal move set.
+`San.Format(position, move)` produces canonical SAN, including the minimum
+source disambiguation, captures, promotions, and check or mate suffix. Pinned
+pieces that cannot legally reach the destination do not require disambiguation.
+Import accepts omitted check suffixes and zeroes in castling; supplied suffixes
+must describe the actual result. Ambiguous moves have a distinct error kind.
+
+## PGN games
+
+`Pgn.Parse(text)` reads one game. `Pgn.ReadGames(text)` lazily yields game results
+from a string and stops after the first error. Errors identify the offending
+token's character offset. A parsed game contains tags, the initial position,
+the recorded result, and an immutable move tree with comments, numeric
+annotations, and recursive variations. Every variation starts before the move
+it replaces and undergoes the same legality checks as the mainline. Nesting is
+limited to 64 levels.
+
+PGN import supports brace and semicolon comments, annotation suffixes, tag
+escapes, move numbers, percent escape lines, and SetUp/FEN games. A result marker
+is required and must agree with the Result tag when present. Move numbers must
+match the position. A FEN tag requires SetUp 1. Variant tags select standard
+chess only.
+
+The PGN result is recorded metadata. Move legality is checked with `MoveRules`;
+applications use `Match` for adjudication and claims. A recorded win or draw does
+not identify which command caused it, so import preserves the result without
+inventing resignation or agreement events.
+
 The notation contracts follow the [PGN/FEN specification](https://www.saremba.de/chessgml/standards/pgn/pgn-complete.htm)
 and [Stockfish's UCI documentation](https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands).
 
