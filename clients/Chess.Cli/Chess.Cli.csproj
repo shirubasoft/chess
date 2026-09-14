@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>dotnet-chess</ToolCommandName>
+    <PackageId>Chess.Cli</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Version>0.1.0</Version>
+    <Description>Crossplay chess with a terminal board and automation-friendly commands.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <PackageReference Include="Terminal.Gui" />
+    <ProjectReference Include="../../src/Chess.Client/Chess.Client.csproj" />
+  </ItemGroup>
+</Project>
