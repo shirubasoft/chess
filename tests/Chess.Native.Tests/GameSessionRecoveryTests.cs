@@ -9,6 +9,58 @@ namespace Chess.Native.Tests;
 
 public sealed class GameSessionRecoveryTests
 {
+    [Test, RequiresRecoveryServer, Category("polling-regression")]
+    public async Task PendingRefreshDoesNotDiscardTheSelectedMoveOrOverwriteItsResult()
+    {
+        using var settings = new TemporarySettings();
+        await using var proxy = new ResponseDroppingProxy(Server);
+        using var session = new GameSession("Chess polling regression", settings.Path, proxy.Address.AbsoluteUri);
+        await session.CreateAsync(proxy.Address.AbsoluteUri);
+        using var http = new HttpClient { BaseAddress = Server };
+        var opponent = new ChessClient(http, "Polling regression opponent");
+        var other = await opponent.JoinAsync(session.Access!.OpponentCode!);
+        await session.RefreshAsync();
+        await session.SelectSquareAsync("e2");
+        proxy.PauseNextRead();
+        var refresh = session.RefreshAsync();
+        await proxy.ReadCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var enabledDuringRead = session.CanMove;
+        var readsDuringPause = proxy.ReadRequestCount;
+        await session.RefreshAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        try { await session.SelectSquareAsync("e4").WaitAsync(TimeSpan.FromSeconds(5)); }
+        finally { proxy.ReleaseRead.TrySetResult(); }
+        await refresh;
+
+        await Assert.That((await opponent.GetAsync(other)).Moves.Length).IsEqualTo(1);
+        await Assert.That(enabledDuringRead).IsTrue();
+        await Assert.That(proxy.ReadRequestCount).IsEqualTo(readsDuringPause);
+        await Assert.That(session.Snapshot!.Moves.Single().Uci).IsEqualTo("e2e4");
+        await Assert.That(session.Message).IsEqualTo("Played e2e4.");
+    }
+
+    [Test, RequiresRecoveryServer, Category("polling-regression")]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task PendingRefreshCannotReplaceTheSnapshotAfterJoiningAnotherGame(bool failedRead)
+    {
+        using var settings = new TemporarySettings();
+        await using var proxy = new ResponseDroppingProxy(Server);
+        using var session = new GameSession("Chess polling regression", settings.Path, proxy.Address.AbsoluteUri);
+        await session.CreateAsync(proxy.Address.AbsoluteUri);
+        using var http = new HttpClient { BaseAddress = Server };
+        var otherGame = await new ChessClient(http, "Another game").CreateAsync();
+        proxy.PauseNextRead(failedRead);
+        var refresh = session.RefreshAsync();
+        await proxy.ReadCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        try { await session.JoinAsync(proxy.Address.AbsoluteUri, otherGame.Code).WaitAsync(TimeSpan.FromSeconds(5)); }
+        finally { proxy.ReleaseRead.TrySetResult(); }
+        await refresh;
+
+        await Assert.That(session.Access!.GameId).IsEqualTo(otherGame.GameId);
+        await Assert.That(session.Snapshot!.GameId).IsEqualTo(otherGame.GameId);
+        await Assert.That(session.Message).IsEqualTo("Game restored. Your side is saved on this device.");
+    }
+
     [Test, RequiresRecoveryServer, NotInParallel("game-session-matchmaking")]
     [Arguments(false)]
     [Arguments(true)]
@@ -114,6 +166,9 @@ public sealed class GameSessionRecoveryTests
         private readonly ConcurrentBag<Task> requests = [];
         private readonly Task accepting;
         private int dropped;
+        private int pauseRead;
+        private int readRequestCount;
+        private bool failPausedRead;
 
         public ResponseDroppingProxy(Uri server, string? dropPath = null)
         {
@@ -132,6 +187,14 @@ public sealed class GameSessionRecoveryTests
         public Uri Address { get; }
         public ConcurrentQueue<Guid> EntryRequestIds { get; } = [];
         public TaskCompletionSource<GameAccess> DroppedAccess { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource ReadCaptured { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource ReleaseRead { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public void PauseNextRead(bool fail = false)
+        {
+            failPausedRead = fail;
+            Interlocked.Exchange(ref pauseRead, 1);
+        }
+        public int ReadRequestCount => Volatile.Read(ref readRequestCount);
 
         private async Task AcceptAsync()
         {
@@ -148,6 +211,7 @@ public sealed class GameSessionRecoveryTests
             try
             {
                 using var request = new HttpRequestMessage(new HttpMethod(context.Request.HttpMethod), context.Request.RawUrl!.TrimStart('/'));
+                if (request.Method == HttpMethod.Get) Interlocked.Increment(ref readRequestCount);
                 byte[] body;
                 using (var buffer = new MemoryStream())
                 {
@@ -168,6 +232,19 @@ public sealed class GameSessionRecoveryTests
                 }
                 using var response = await upstream.SendAsync(request, lifetime.Token);
                 var result = await response.Content.ReadAsByteArrayAsync(lifetime.Token);
+                if (request.Method == HttpMethod.Get && Interlocked.Exchange(ref pauseRead, 0) == 1)
+                {
+                    ReadCaptured.TrySetResult();
+                    await ReleaseRead.Task.WaitAsync(lifetime.Token);
+                    if (failPausedRead)
+                    {
+                        response.StatusCode = HttpStatusCode.ServiceUnavailable;
+                        result = JsonSerializer.SerializeToUtf8Bytes(new GameError
+                        {
+                            Code = "delayed_refresh_error", Message = "The previous game's refresh failed."
+                        }, GameJson.Options);
+                    }
+                }
                 context.Response.StatusCode = (int)response.StatusCode;
                 context.Response.ContentType = response.Content.Headers.ContentType?.ToString() ?? "application/json";
                 context.Response.ContentLength64 = result.Length;
