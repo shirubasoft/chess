@@ -9,6 +9,26 @@ permissions:
   contents: read
 
 jobs:
+  server-e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: '10.0.x'
+      - name: Install Aspire
+        run: dotnet tool install --global Aspire.Cli --version 13.5.3
+      - name: Validate PostgreSQL server and event transports
+        run: bash scripts/test-server.sh Postgres
+      - name: Upload server test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-test-results
+          path: TestResults/
+
   tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
