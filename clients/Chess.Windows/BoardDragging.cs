@@ -36,11 +36,13 @@ public sealed partial class ChessWindow
             if (!dragging)
             {
                 dragging = true;
-                board.CaptureMouse();
                 dragLayer = AdornerLayer.GetAdornerLayer(board);
                 dragPreview = new DragAdorner(board, squares[drag.Source].Content?.ToString() ?? "");
                 dragLayer?.Add(dragPreview);
                 squares[drag.Source].Opacity = 0.4;
+                // Capture synchronizes mouse state and can reenter this handler immediately.
+                if (!board.CaptureMouse()) { CancelBoardDrag(); return; }
+                if (boardDrag != drag) return;
             }
             dragPreview!.Position = position;
             dragPreview.InvalidateVisual();
