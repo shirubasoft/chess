@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="GirCore.Gtk-4.0" />
+    <ProjectReference Include="../../src/Chess.Client/Chess.Client.csproj" />
+    <Compile Include="../../tests/Chess.Native.Tests/NativeUiVerification.cs" Link="Verification/NativeUiVerification.cs" />
+  </ItemGroup>
+</Project>

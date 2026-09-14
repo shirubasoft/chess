@@ -12,6 +12,10 @@ Use the server URL reported by Aspire. The AppHost gives PostgreSQL a persistent
 volume and injects its connection string into the server. `Chess:Backend` selects
 the command executor. The AppHost passes its `backend` parameter to this setting.
 For a separately hosted server, set `ConnectionStrings__chess` and `Chess__Backend`.
+To orchestrate against an existing PostgreSQL database, set `ConnectionStrings__chess`
+on the AppHost. It then supplies that connection instead of creating a container.
+For disposable test databases, pass `--Chess:Ephemeral=true` after the Aspire
+command's `--` separator; this omits the container's persistent volume and lifetime.
 
 Select `Akka` or `Orleans` with `--Parameters:backend=Orleans` after the Aspire
 command's `--` separator. Akka is the default. Akka.Hosting manages the actor system, and cluster sharding routes each
