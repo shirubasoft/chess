@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Chess.Client;
 
-public sealed class GameSession : IDisposable
+public sealed partial class GameSession : IDisposable
 {
     private readonly string settingsPath;
     private readonly SemaphoreSlim operation = new(1, 1);
