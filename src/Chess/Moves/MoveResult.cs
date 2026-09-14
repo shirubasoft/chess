@@ -11,8 +11,7 @@ public union MoveResult(
     KingWouldBeInCheck,
     PromotionRequired,
     InvalidPromotion,
-    CastlingUnavailable,
-    MoveCounterOverflow)
+    CastlingUnavailable)
 {
     public static SourceSquareEmpty SourceSquareEmpty { get; } = new();
 
@@ -33,8 +32,6 @@ public union MoveResult(
     public static InvalidPromotion InvalidPromotion { get; } = new();
 
     public static CastlingUnavailable CastlingUnavailable { get; } = new();
-
-    public static MoveCounterOverflow MoveCounterOverflow { get; } = new();
 }
 
 public sealed class SourceSquareEmpty
@@ -103,13 +100,6 @@ public sealed class InvalidPromotion
 public sealed class CastlingUnavailable
 {
     internal CastlingUnavailable()
-    {
-    }
-}
-
-public sealed class MoveCounterOverflow
-{
-    internal MoveCounterOverflow()
     {
     }
 }

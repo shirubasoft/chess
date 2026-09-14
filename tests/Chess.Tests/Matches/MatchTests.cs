@@ -93,8 +93,6 @@ public sealed class MatchTests
         var promotion = Match.Start(Setup(("e1", 'K'), ("a7", 'P'), ("h8", 'k')));
         await Reject<PromotionRequired>(promotion, Move("a7", "a8"));
         await Reject<InvalidPromotion>(state, new Promote { From = Square("e2"), To = Square("e3"), Piece = PromotionPiece.Queen });
-        var overflow = Match.Start(Position.Initial with { SideToMove = Side.Black, FullmoveNumber = int.MaxValue });
-        await Reject<MoveCounterOverflow>(overflow, Move("e7", "e5"));
         await Assert.That(History(state).Keys.Count).IsEqualTo(1);
     }
 

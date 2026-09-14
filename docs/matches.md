@@ -49,9 +49,9 @@ validates the recorded move and rejects any event after a finish. Persistence an
 wire formats belong to the application boundary; replay consumes domain events.
 
 The finish decision uses [position outcomes](position-outcomes.md) and
-[repetition history](repetition.md). A proven dead position finishes immediately;
-an undetermined position permits continued play. Threefold repetition and 100
-halfmoves require a claim. Fivefold repetition and 150 halfmoves finish
+[repetition history](repetition.md). A recognized dead position finishes
+immediately; an ongoing position permits continued play. Threefold repetition and
+100 halfmoves require a claim. Fivefold repetition and 150 halfmoves finish
 automatically. Checkmate takes precedence over the 150-halfmove rule, as specified
 by [FIDE Article 9.6.2](https://handbook.fide.com/chapter/e012023).
 

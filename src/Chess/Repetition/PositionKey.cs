@@ -47,7 +47,6 @@ public sealed record PositionKey
             return EnPassantState.None;
         }
         var targetFile = BoardGeometry.File(target.Square);
-        var searchable = position with { HalfmoveClock = 0, FullmoveNumber = 1 };
         for (var file = targetFile - 1; file <= targetFile + 1; file += 2)
         {
             if (file is < 0 or > 7)
@@ -56,7 +55,7 @@ public sealed record PositionKey
             }
             var from = BoardGeometry.At(file, targetRank + (white ? -1 : 1));
             if (position.Board[from] is Occupied occupied && occupied.Piece.Piece is Pawn
-                && MoveRules.Apply(searchable, new MovePiece { From = from, To = target.Square }) is Position)
+                && MoveRules.Apply(position, new MovePiece { From = from, To = target.Square }) is Position)
             {
                 return target;
             }

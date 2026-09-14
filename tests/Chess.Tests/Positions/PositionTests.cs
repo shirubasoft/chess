@@ -81,7 +81,6 @@ public sealed class PositionTests
     [Test]
     [Arguments(0, 1)]
     [Arguments(100, 51)]
-    [Arguments(int.MaxValue, int.MaxValue)]
     public async Task ValidCounterValuesArePreserved(int halfmoveClock, int fullmoveNumber)
     {
         var constructed = CreatePosition(halfmoveClock, fullmoveNumber);

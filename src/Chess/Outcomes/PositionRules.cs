@@ -2,72 +2,43 @@ namespace Chess;
 
 public static class PositionRules
 {
-    public static PositionOutcome GetOutcome(
-        Position position, DeadPositionSearch? search = null, CancellationToken cancellationToken = default)
+    public static PositionOutcome GetOutcome(Position position)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        if (!MoveRules.HasLegalMove(position))
+        using var moves = MoveRules.GetLegalMoves(position).GetEnumerator();
+        if (!moves.MoveNext())
         {
             return MoveRules.IsInCheck(position)
                 ? new Checkmate { Winner = position.SideToMove switch { White => Side.Black, Black => Side.White } }
                 : PositionOutcome.Stalemate;
         }
 
-        search ??= DeadPositionSearch.Default;
-        var remaining = search.MaximumPositions;
-        return Search(position, search.MaximumDepth, ref remaining, cancellationToken) switch
+        if (HasDeadMaterial(position.Board)
+            || CaptureLeavesBareKings(position.Board, moves.Current) && !moves.MoveNext())
         {
-            Analysis.Dead => PositionOutcome.DeadPosition,
-            Analysis.MateReachable => PositionOutcome.MatingContinuationExists,
-            Analysis.Undetermined => PositionOutcome.Undetermined,
-            _ => throw new InvalidOperationException("Unknown analysis result.")
-        };
+            return PositionOutcome.DeadPosition;
+        }
+
+        return PositionOutcome.Ongoing;
     }
 
-    private static Analysis Search(Position position, int depth, ref int remaining, CancellationToken cancellationToken)
+    private static bool CaptureLeavesBareKings(Board board, MoveRequest move)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        if (remaining == 0)
+        if (move is not MovePiece capture
+            || board[capture.From] is not Occupied { Piece.Piece: King }
+            || board[capture.To] is not Occupied)
         {
-            return Analysis.Undetermined;
-        }
-        remaining--;
-
-        if (!MoveRules.HasLegalMove(position))
-        {
-            return MoveRules.IsInCheck(position) ? Analysis.MateReachable : Analysis.Dead;
-        }
-        if (HasDeadMaterial(position.Board))
-        {
-            return Analysis.Dead;
-        }
-        if (depth == 0)
-        {
-            return Analysis.Undetermined;
+            return false;
         }
 
-        var allDead = true;
-        var searchable = position with { HalfmoveClock = 0, FullmoveNumber = 1 };
-        foreach (var move in MoveRules.GetLegalMoves(searchable))
+        foreach (var square in BoardGeometry.All())
         {
-            if (remaining == 0)
+            if (square != capture.To && board[square] is Occupied { Piece.Piece: not King })
             {
-                return Analysis.Undetermined;
+                return false;
             }
-            var next = MoveRules.Apply(searchable, move) switch
-            {
-                Position accepted => accepted,
-                _ => throw new InvalidOperationException("A generated legal move must be applicable with reset counters.")
-            };
-            var result = Search(next, depth - 1, ref remaining, cancellationToken);
-            if (result == Analysis.MateReachable)
-            {
-                return result;
-            }
-            allDead &= result == Analysis.Dead;
         }
 
-        return allDead ? Analysis.Dead : Analysis.Undetermined;
+        return true;
     }
 
     private static bool HasDeadMaterial(Board board)
@@ -100,12 +71,5 @@ public static class PositionRules
         }
 
         return minors <= 1 || knights == 0 && sameColorBishops;
-    }
-
-    private enum Analysis
-    {
-        Dead,
-        MateReachable,
-        Undetermined
     }
 }

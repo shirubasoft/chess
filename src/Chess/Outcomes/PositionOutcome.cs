@@ -1,14 +1,12 @@
 namespace Chess;
 
-public union PositionOutcome(Checkmate, Stalemate, DeadPosition, MatingContinuationExists, UndeterminedPosition)
+public union PositionOutcome(Checkmate, Stalemate, DeadPosition, OngoingPosition)
 {
     public static Stalemate Stalemate { get; } = new();
 
     public static DeadPosition DeadPosition { get; } = new();
 
-    public static MatingContinuationExists MatingContinuationExists { get; } = new();
-
-    public static UndeterminedPosition Undetermined { get; } = new();
+    public static OngoingPosition Ongoing { get; } = new();
 }
 
 public sealed record Checkmate
@@ -30,16 +28,9 @@ public sealed class DeadPosition
     }
 }
 
-public sealed class MatingContinuationExists
+public sealed class OngoingPosition
 {
-    internal MatingContinuationExists()
-    {
-    }
-}
-
-public sealed class UndeterminedPosition
-{
-    internal UndeterminedPosition()
+    internal OngoingPosition()
     {
     }
 }

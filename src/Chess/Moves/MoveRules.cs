@@ -8,11 +8,9 @@ public static class MoveRules
 
     public static IEnumerable<MoveRequest> GetLegalMoves(Position position)
     {
-        // Counters limit representable moves, not which moves are legal on the board.
-        var searchable = position with { HalfmoveClock = 0, FullmoveNumber = 1 };
-        foreach (var request in Candidates(searchable))
+        foreach (var request in Candidates(position))
         {
-            if (Apply(searchable, request) is Position)
+            if (Apply(position, request) is Position)
             {
                 yield return request;
             }
@@ -254,12 +252,6 @@ public static class MoveRules
         }
 
         var resetClock = moving.Piece is Pawn || captured is not null;
-        if ((!resetClock && position.HalfmoveClock == int.MaxValue)
-            || (!white && position.FullmoveNumber == int.MaxValue))
-        {
-            return MoveResult.MoveCounterOverflow;
-        }
-
         var whiteRights = position.WhiteCastlingRights;
         var blackRights = position.BlackCastlingRights;
         if (moving.Piece is King)
