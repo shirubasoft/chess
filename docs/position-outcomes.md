@@ -2,9 +2,7 @@
 
 `PositionRules.GetOutcome` distinguishes checkmate, stalemate, proven dead
 positions, positions with a discovered mating continuation, and undetermined
-positions. Checkmate includes the winning side. Invalid king counts return
-`InvalidPosition` before outcome detection. Edited setups must otherwise obey the
-chess rules; the model does not prove that a board is reachable from the start.
+positions. Checkmate includes the winning side.
 
 [FIDE Article 5.2.2](https://handbook.fide.com/chapter/e012023) defines deadness by
 whether either side could ever mate through legal play, including cooperation.

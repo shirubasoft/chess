@@ -18,7 +18,7 @@ snapshot and returns a new history, sharing immutable storage. It preserves the
 chronological key sequence and occurrence counts, including nonconsecutive
 repetitions. The caller records accepted positions in order; `Record` is a
 snapshot operation and does not validate that one position follows another by a
-legal move. Invalid king counts are rejected at key creation.
+legal move.
 
 `CurrentOccurrences`, `IsThreefoldRepetition`, and `IsFivefoldRepetition` describe
 the current snapshot. `Occurrences(key)` also supports checking an intended move

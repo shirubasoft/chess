@@ -68,7 +68,6 @@ public sealed class MatchTests
         await AssertDraw(Match.Start(Setup(("f6", 'K'), ("f7", 'Q'), ("h8", 'k')) with { SideToMove = Side.Black }), DrawReason.Stalemate);
         var mate = Match.Start(Setup(("f6", 'K'), ("g7", 'Q'), ("h8", 'k')) with { SideToMove = Side.Black });
         await Assert.That(mate.Value).IsTypeOf<FinishedMatch>();
-        await Assert.That(() => Match.Start(Setup())).Throws<ArgumentException>();
         await AssertDraw(Match.Replay([], Setup(("a1", 'K'), ("h8", 'k'))), DrawReason.DeadPosition);
     }
 

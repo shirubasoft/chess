@@ -5,7 +5,6 @@ public union MatchCommandResult(
     MatchAlreadyFinished,
     WrongPlayer,
     DrawClaimUnavailable,
-    InvalidPosition,
     SourceSquareEmpty,
     WrongSideToMove,
     FriendlyPieceOnDestination,

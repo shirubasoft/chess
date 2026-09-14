@@ -2,7 +2,7 @@
 
 `Match.Start()` creates the standard game. Pass an initial `Position` to start
 from an edited setup. The initial snapshot counts toward repetition and is
-adjudicated immediately. Invalid king counts throw `ArgumentException`.
+adjudicated immediately.
 
 `MatchState` is either `OngoingMatch` or `FinishedMatch`. Each carries immutable
 position history. A finished state carries a `MatchResult`, either `MatchWon`

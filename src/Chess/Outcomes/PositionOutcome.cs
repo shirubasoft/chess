@@ -1,6 +1,6 @@
 namespace Chess;
 
-public union PositionOutcome(Checkmate, Stalemate, DeadPosition, MatingContinuationExists, UndeterminedPosition, InvalidPosition)
+public union PositionOutcome(Checkmate, Stalemate, DeadPosition, MatingContinuationExists, UndeterminedPosition)
 {
     public static Stalemate Stalemate { get; } = new();
 

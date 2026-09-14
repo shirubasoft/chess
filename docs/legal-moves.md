@@ -9,9 +9,8 @@ enumerate this sequence locally. `MoveRules.HasLegalMove(position)` stops at the
 first legal reply. `MoveRules.IsInCheck(position)` queries the side to move; the
 overload accepting a `Side` queries that side.
 
-Queries require exactly one king per side and throw `ArgumentException` otherwise.
-Enumeration validates this when iteration starts. The position model also permits
-edited board setups; king counts do not establish historical reachability.
+The rules operate on valid chess positions. `Position.Initial` and accepted moves
+preserve that invariant.
 
 Move counters do not affect chess legality. Queries can therefore return a move
 that `Apply` rejects with `MoveCounterOverflow` when its resulting counters cannot

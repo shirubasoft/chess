@@ -110,13 +110,8 @@ public sealed class LegalMoveTests
     }
 
     [Test]
-    public async Task EnumerationIsDeferredRepeatableAndCanBePartiallyConsumed()
+    public async Task EnumerationCanBePartiallyConsumedAndRepeated()
     {
-        var invalid = Setup();
-        var deferred = MoveRules.GetLegalMoves(invalid);
-        await Assert.That(() => deferred.GetEnumerator().MoveNext()).Throws<ArgumentException>();
-        await Assert.That(() => MoveRules.IsInCheck(invalid)).Throws<ArgumentException>();
-        await Assert.That(() => MoveRules.HasLegalMove(invalid)).Throws<ArgumentException>();
         var moves = MoveRules.GetLegalMoves(Position.Initial);
         using (var iterator = moves.GetEnumerator())
         {
