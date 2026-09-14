@@ -39,6 +39,7 @@ public sealed class ChessWindow : Window
     private readonly Dictionary<string, Button> namedCommands = [];
     private readonly SolidColorBrush light = new(Color.FromRgb(232, 229, 214));
     private readonly SolidColorBrush dark = new(Color.FromRgb(140, 157, 131));
+    private readonly ControlTemplate squareTemplate = CreateSquareTemplate();
 
     public ChessWindow(string[] args)
     {
@@ -130,6 +131,23 @@ public sealed class ChessWindow : Window
         AutomationProperties.SetAutomationId(target, id); AutomationProperties.SetName(target, label);
     }
 
+    private static ControlTemplate CreateSquareTemplate()
+    {
+        // The default disabled-button chrome replaces the board colors. Keep the square's
+        // background and destination border while leaving Button's focus adorner and input intact.
+        var border = new FrameworkElementFactory(typeof(Border));
+        border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+        border.SetValue(Border.BorderBrushProperty, new TemplateBindingExtension(Control.BorderBrushProperty));
+        border.SetValue(Border.BorderThicknessProperty, new TemplateBindingExtension(Control.BorderThicknessProperty));
+        border.SetValue(SnapsToDevicePixelsProperty, true);
+        var content = new FrameworkElementFactory(typeof(ContentPresenter));
+        content.SetValue(ContentPresenter.ContentProperty, new TemplateBindingExtension(ContentControl.ContentProperty));
+        content.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        content.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
+        border.AppendChild(content);
+        return new ControlTemplate(typeof(Button)) { VisualTree = border };
+    }
+
     private void Render()
     {
         status.Text = session.Status; opponent.Text = $"Opponent: {session.Opponent}"; message.Text = session.Message; history.Text = session.History;
@@ -147,7 +165,7 @@ public sealed class ChessWindow : Window
             squares.Clear(); board.Children.Clear();
             foreach (var square in rendered)
             {
-                var button = new Button { FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = 43, Padding = new Thickness(0), Margin = new Thickness(0) };
+                var button = new Button { Template = squareTemplate, FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = 43, Padding = new Thickness(0), Margin = new Thickness(0) };
                 button.Click += async (_, _) => await session.SelectSquareAsync(square.Name);
                 squares.Add(square.Name, button); board.Children.Add(button);
             }
