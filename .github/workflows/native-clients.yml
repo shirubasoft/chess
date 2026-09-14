@@ -96,6 +96,16 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: pwsh -NoProfile -File scripts/native/test-ui.ps1 -Platform Android -Backend '${{ matrix.backend }}' -Device emulator-5554
+      - name: Publish desktop Release package
+        if: matrix.platform != 'Android' && matrix.backend == 'Akka'
+        run: dotnet publish clients/Chess.${{ matrix.platform }}/Chess.${{ matrix.platform }}.csproj --configuration Release --self-contained false --output artifacts/native/packages/${{ matrix.platform }}
+      - name: Upload desktop Release package
+        if: matrix.platform != 'Android' && matrix.backend == 'Akka'
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}-release
+          if-no-files-found: error
+          path: artifacts/native/packages/${{ matrix.platform }}/
       - name: Upload native verification evidence
         if: always()
         uses: actions/upload-artifact@v4
