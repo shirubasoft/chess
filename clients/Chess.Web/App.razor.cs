@@ -39,6 +39,10 @@ public partial class App
     private CancellationTokenSource? _watchCancellation;
     private Task? _watchTask;
     private readonly CancellationTokenSource _lifetime = new();
+    private ElementReference _board;
+    private IJSObjectReference? _boardModule;
+    private IJSObjectReference? _boardInput;
+    private DotNetObjectReference<App>? _boardCallback;
 
     private enum UpdateTransport { Polling, Sse, WebSocket }
     private PlayerSide YourSide => _access?.Side ?? PlayerSide.White;
@@ -47,6 +51,9 @@ public partial class App
     private string YourName => _snapshot is null ? "You" : (YourSide == PlayerSide.White ? _snapshot.White.ClientName : _snapshot.Black.ClientName) ?? "Chess Web";
     private string OpponentName => _snapshot is null ? "An open seat" : (OpponentSide == PlayerSide.White ? _snapshot.White.ClientName : _snapshot.Black.ClientName) ?? "An open seat";
     private bool CanPlay => _snapshot is { Status: GameStatus.Active } && _snapshot.SideToMove == YourSide;
+    private string DragContext => $"{_snapshot?.GameId}:{_snapshot?.Revision}:{Orientation}:{CanPlay && !_busy}";
+    private string DragDestinations(string square) => CanPlay && !_busy
+        ? string.Join(' ', BoardPresentation.Destinations(_legalMoves, square)) : "";
     private string HeadingDescription => _snapshot is null
         ? "A shared game, wherever you play."
         : _snapshot.Status == GameStatus.Finished ? "Every game has another beginning."
@@ -73,6 +80,38 @@ public partial class App
         {
             _error = "This browser cannot save game access. Keep your side code to resume later.";
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _boardModule = await Javascript.InvokeAsync<IJSObjectReference>("import", "./js/board-input.js");
+            _boardCallback = DotNetObjectReference.Create(this);
+            _boardInput = await _boardModule.InvokeAsync<IJSObjectReference>("attach", _board, _boardCallback);
+        }
+        catch (JSException)
+        {
+            _error = "Dragging could not load. Select a piece and then its destination, or reload to retry.";
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task DropBoardPiece(string from, string? to, string context)
+    {
+        if (_lifetime.IsCancellationRequested || !CanPlay || _busy || context != DragContext) return;
+        ClearSelection();
+        var moves = to is null ? [] : BoardPresentation.MovesBetween(_legalMoves, from, to);
+        if (moves.Length == 1) await PlayAsync(moves[0], MoveNotation.Uci);
+        else if (moves.Length > 1)
+        {
+            _selected = from;
+            _targets = BoardPresentation.Destinations(_legalMoves, from).ToHashSet(StringComparer.Ordinal);
+            _promotionMoves = moves;
+        }
+        StateHasChanged();
     }
 
     private Task CreateAsync() => OpenAsync(async () => await Client.CreateAsync(
@@ -305,6 +344,7 @@ public partial class App
 
     private void FlipBoard()
     {
+        ClearSelection();
         _flipped = !_flipped;
         _squares = BoardPresentation.Squares(_snapshot is null ? Position.Initial : ChessClient.PositionOf(_snapshot), Orientation).ToArray();
     }
@@ -332,6 +372,14 @@ public partial class App
 
     public async ValueTask DisposeAsync()
     {
+        if (_boardInput is not null)
+        {
+            try { await _boardInput.InvokeVoidAsync("dispose"); }
+            catch (JSException) { }
+            await _boardInput.DisposeAsync();
+        }
+        _boardCallback?.Dispose();
+        if (_boardModule is not null) await _boardModule.DisposeAsync();
         await _lifetime.CancelAsync();
         await StopWatchingAsync();
         _lifetime.Dispose();

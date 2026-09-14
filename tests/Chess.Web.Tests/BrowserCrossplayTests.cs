@@ -9,7 +9,7 @@ namespace Chess.Web.Tests;
 
 [Category("Browser")]
 [NotInParallel]
-public sealed class BrowserCrossplayTests
+public sealed partial class BrowserCrossplayTests
 {
     [Test]
     [Arguments("Polling")]

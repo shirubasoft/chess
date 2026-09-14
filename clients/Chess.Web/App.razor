@@ -37,13 +37,14 @@
             </div>
 
             <div class="board-frame">
-                <div class="chessboard" role="group" aria-label="Chessboard. Select a piece, then its destination." data-testid="board" data-fen="@_snapshot?.Fen" data-game-id="@_snapshot?.GameId" data-revision="@_snapshot?.Revision">
+                <div @ref="_board" class="chessboard" role="group" aria-label="Chessboard. Drag a piece, or select a piece and then its destination." data-testid="board" data-fen="@_snapshot?.Fen" data-game-id="@_snapshot?.GameId" data-revision="@_snapshot?.Revision" data-drag-context="@DragContext">
                     @foreach (var square in _squares)
                     {
                         <button @key="square.Name" type="button"
                             class="@SquareClass(square)"
                             data-testid="square-@square.Name" data-piece="@square.Piece" data-side="@square.Side"
-                            aria-label="@square.Description" aria-pressed="@(_selected == square.Name)"
+                            data-square="@square.Name" data-destinations="@DragDestinations(square.Name)"
+                            aria-label="@square.Description" aria-pressed="@(_selected == square.Name ? "true" : "false")"
                             @onclick="() => SelectSquareAsync(square)" disabled="@(!CanPlay || _busy)">
                             @if (square.Piece is not null)
                             {
@@ -97,7 +98,7 @@
                         <input id="move" data-testid="move-input" @bind="_move" @bind:event="oninput" placeholder="@(_notation == MoveNotation.San ? "e.g. Nf3 or O-O" : "e.g. g1f3 or e7e8q")" autocomplete="off" spellcheck="false" autocapitalize="off" disabled="@(!CanPlay || _busy)" />
                         <button class="primary" type="submit" data-testid="play-move" disabled="@(!CanPlay || _busy || string.IsNullOrWhiteSpace(_move))">Play</button>
                     </div>
-                    <p class="field-hint">@(_selected is null ? "You can also select a piece on the board." : $"Selected {_selected}. Choose a highlighted square.")</p>
+                    <p class="field-hint">@(_selected is null ? "Drag a piece, or select it and then its destination." : $"Selected {_selected}. Choose a highlighted square.")</p>
                 </form>
             }
             else

@@ -12,7 +12,7 @@ Chess__ServerUrl=http://localhost:5080 dotnet run --project clients/Chess.Web/Ho
 
 Open `http://localhost:5090`. Create a private game and send the opponent's join code to another player, or find a random opponent. A side code can also resume the same side from a different client. The interface shows each side's current client name.
 
-Select a piece and a highlighted destination, or enter SAN or UCI in the move field. Pawn promotion opens a piece chooser. Game access and update settings are below the move history. Polling works without a persistent connection. SSE and WebSocket modes reconnect and refresh the current snapshot after transport failures.
+Drag a piece with a mouse or finger to a highlighted destination, select the piece and destination in two clicks or taps, or enter SAN or UCI in the move field. Pawn promotion opens a piece chooser. Drop outside the board or press Escape to cancel a drag. A changed game, revision, or board orientation also cancels it. Game access and update settings are below the move history. Polling works without a persistent connection. SSE and WebSocket modes reconnect and refresh the current snapshot after transport failures.
 
 The Aspire resource name for the referenced API is `server`. The host accepts `services:server:https:0`, `services:server:http:0`, or an explicit `Chess:ServerUrl`. Browser requests use the web host's origin. The host fails startup if its server URL is absent or invalid.
 
@@ -30,7 +30,7 @@ pwsh tests/Chess.Web.Tests/bin/Debug/net11.0/playwright.ps1 install chromium
 CHESS_WEB_URL=http://localhost:5090 CHESS_SERVER_URL=http://localhost:5080 dotnet test --project tests/Chess.Web.Tests
 ```
 
-The `Browser` category exercises real browser moves, a reference opponent using the shared client, saved access after reload, recovery from committed requests with lost responses, underpromotion, draw agreement, resignation, and each update transport. Set these addresses in each backend's CI job; absent addresses explicitly skip browser tests. Desktop and phone screenshots go to `artifacts/chess-web` or `CHESS_SCREENSHOT_DIRECTORY` when specified. The crossplay suite combines real browser and CLI execution with the native apps' shared `GameSession`. Native process and control checks run separately on each target platform.
+The `Browser` category exercises real mouse and touch dragging, both sides and board orientations, special moves, cancellation, a reference opponent using the shared client, saved access after reload, recovery from committed requests with lost responses, underpromotion, draw agreement, resignation, and each update transport. Set these addresses in each backend's CI job; absent addresses explicitly skip browser tests. Desktop and phone screenshots go to `artifacts/chess-web` or `CHESS_SCREENSHOT_DIRECTORY` when specified. Set `CHESS_DRAG_VIDEO_DIRECTORY` to save paced mouse and touch gameplay recordings as WebM files. The crossplay suite combines real browser and CLI execution with the native apps' shared `GameSession`. Native process and control checks run separately on each target platform.
 
 Trimming is disabled because the shared domain's union serializer uses reflection. The self-hosted Newsreader font is under the SIL Open Font License in `wwwroot/fonts/OFL.txt`.
 
