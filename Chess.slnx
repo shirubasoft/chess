@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Chess/Chess.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Chess.Tests/Chess.Tests.csproj" />
+  </Folder>
 </Solution>
