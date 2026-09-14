@@ -34,58 +34,65 @@ public sealed class PositionOutcomeTests
     [Arguments("8/7k/8/8/8/8/K7/BN6 w - - 0 1")]
     [Arguments("8/7k/8/8/8/8/K7/Nn6 w - - 0 1")]
     [Arguments("8/7k/8/8/8/8/KP6/8 w - - 0 1")]
-    public async Task UnprovedMaterialRemainsUndeterminedAtTheSearchLimit(string fen)
+    [Arguments("8/7k/8/8/8/8/K7/R7 w - - 0 1")]
+    [Arguments("8/7k/8/8/8/8/K7/Q7 w - - 0 1")]
+    public async Task MaterialOutsideTheProvenCasesPermitsPlay(string fen)
     {
-        var result = PositionRules.GetOutcome(FromFen(fen), new DeadPositionSearch { MaximumDepth = 0 });
-        await Assert.That(result.Value).IsTypeOf<UndeterminedPosition>();
+        await Assert.That(PositionRules.GetOutcome(FromFen(fen)).Value).IsTypeOf<OngoingPosition>();
     }
 
     [Test]
-    public async Task ForcedPawnCaptureProvesADeadPositionBeyondMaterialCounts()
+    public async Task StartingPositionAndMateInOneAreOngoingUntilAMoveEndsTheGame()
     {
-        // Black's only move is Kxa7. The pawn cannot ever promote.
-        var position = Setup(("c6", 'K'), ("a7", 'P'), ("a8", 'k')) with { SideToMove = Side.Black };
-        await Assert.That(MoveRules.GetLegalMoves(position).Single()).IsEqualTo((MoveRequest)Move("a8", "a7"));
-        await Assert.That(PositionRules.GetOutcome(position, new DeadPositionSearch { MaximumDepth = 0 }).Value).IsTypeOf<UndeterminedPosition>();
-        await Assert.That(PositionRules.GetOutcome(position).Value).IsTypeOf<DeadPosition>();
-    }
-
-    [Test]
-    public async Task AMatingContinuationDisprovesDeadnessWithoutRequiringForcedMate()
-    {
+        await Assert.That(PositionRules.GetOutcome(Position.Initial).Value).IsTypeOf<OngoingPosition>();
         var position = Setup(("f6", 'K'), ("g6", 'Q'), ("h8", 'k'));
-        var result = PositionRules.GetOutcome(position, new DeadPositionSearch { MaximumDepth = 1 });
-        await Assert.That(result.Value).IsTypeOf<MatingContinuationExists>();
-        var twoKnightsMate = Setup(("g6", 'K'), ("f6", 'N'), ("f7", 'N'), ("h8", 'k')) with { SideToMove = Side.Black };
-        await Assert.That(PositionRules.GetOutcome(twoKnightsMate).Value).IsTypeOf<Checkmate>();
+        await Assert.That(PositionRules.GetOutcome(position).Value).IsTypeOf<OngoingPosition>();
+        var mate = await Result<Position>(MoveRules.Apply(position, Move("g6", "g7")));
+        await Assert.That(PositionRules.GetOutcome(mate).Value).IsTypeOf<Checkmate>();
     }
 
     [Test]
-    public async Task PositionBudgetExhaustionCannotProveADraw()
+    [Arguments("k7/P7/2K5/8/8/8/8/8 b - - 0 1", "a8", "a7")]
+    [Arguments("8/8/8/8/8/2k5/p7/K7 w - - 0 1", "a1", "a2")]
+    [Arguments("7k/7P/5K2/8/8/8/8/8 b - - 0 1", "h8", "h7")]
+    public async Task AForcedCaptureOfTheLastPieceIsDead(string fen, string from, string to)
     {
-        var position = Setup(("c6", 'K'), ("a7", 'P'), ("a8", 'k')) with { SideToMove = Side.Black };
-        var result = PositionRules.GetOutcome(position, new DeadPositionSearch { MaximumPositions = 1 });
-        await Assert.That(result.Value).IsTypeOf<UndeterminedPosition>();
-        await Assert.That(PositionRules.GetOutcome(Position.Initial).Value).IsTypeOf<UndeterminedPosition>();
-    }
-
-    [Test]
-    public async Task SearchIgnoresCountersAndHonorsCancellation()
-    {
-        var position = Setup(("c6", 'K'), ("a7", 'P'), ("a8", 'k')) with
-        {
-            SideToMove = Side.Black, HalfmoveClock = int.MaxValue, FullmoveNumber = int.MaxValue
-        };
+        var position = FromFen(fen);
+        await Assert.That(MoveRules.GetLegalMoves(position).Single()).IsEqualTo((MoveRequest)Move(from, to));
         await Assert.That(PositionRules.GetOutcome(position).Value).IsTypeOf<DeadPosition>();
-        await Assert.That(() => PositionRules.GetOutcome(position, cancellationToken: new CancellationToken(true)))
-            .Throws<OperationCanceledException>();
+        var next = await Result<Position>(MoveRules.Apply(position, Move(from, to)));
+        await Assert.That(PositionRules.GetOutcome(next).Value).IsTypeOf<DeadPosition>();
     }
 
     [Test]
-    public async Task SearchLimitsRejectInvalidValues()
+    public async Task AnAlternativeToCapturingTheLastPiecePermitsPlay()
     {
-        await Assert.That(() => new DeadPositionSearch { MaximumDepth = -1 }).Throws<ArgumentOutOfRangeException>();
-        await Assert.That(() => new DeadPositionSearch { MaximumDepth = 65 }).Throws<ArgumentOutOfRangeException>();
-        await Assert.That(() => new DeadPositionSearch { MaximumPositions = 0 }).Throws<ArgumentOutOfRangeException>();
+        var position = Setup(("c5", 'K'), ("a7", 'P'), ("a8", 'k')) with { SideToMove = Side.Black };
+        await Assert.That(MoveRules.GetLegalMoves(position).First()).IsEqualTo((MoveRequest)Move("a8", "a7"));
+        await Result<Position>(MoveRules.Apply(position, Move("a8", "b7")));
+        await Assert.That(PositionRules.GetOutcome(position).Value).IsTypeOf<OngoingPosition>();
+    }
+
+    [Test]
+    public async Task AForcedCaptureWithOtherMaterialRemainingPermitsPlay()
+    {
+        var position = Setup(("c6", 'K'), ("a7", 'P'), ("h1", 'R'), ("a8", 'k')) with { SideToMove = Side.Black };
+        await Assert.That(MoveRules.GetLegalMoves(position).Single()).IsEqualTo((MoveRequest)Move("a8", "a7"));
+        await Assert.That(PositionRules.GetOutcome(position).Value).IsTypeOf<OngoingPosition>();
+    }
+
+    [Test]
+    public async Task AProtectedLastPieceCannotBeCapturedToProveDeadness()
+    {
+        var position = Setup(("b6", 'K'), ("a7", 'P'), ("a8", 'k')) with { SideToMove = Side.Black };
+        await Result<KingWouldBeInCheck>(MoveRules.Apply(position, Move("a8", "a7")));
+        await Assert.That(PositionRules.GetOutcome(position).Value).IsTypeOf<Stalemate>();
+    }
+
+    [Test]
+    public async Task TwoKnightsCanCheckmateWithCooperation()
+    {
+        var position = Setup(("g6", 'K'), ("f6", 'N'), ("f7", 'N'), ("h8", 'k')) with { SideToMove = Side.Black };
+        await Assert.That(PositionRules.GetOutcome(position).Value).IsTypeOf<Checkmate>();
     }
 }

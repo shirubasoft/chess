@@ -117,28 +117,4 @@ public sealed class MoveRulesTests
         await Assert.That(next.HalfmoveClock).IsEqualTo(9);
         await Assert.That(next.EnPassant.Value).IsSameReferenceAs(EnPassantState.None);
     }
-
-    [Test]
-    public async Task CounterOverflowReturnsARejectionWithoutChangingThePosition()
-    {
-        var position = Setup(("a1", 'K'), ("h8", 'k'), ("b1", 'N')) with { HalfmoveClock = int.MaxValue };
-        await Result<MoveCounterOverflow>(MoveRules.Apply(position, Move("b1", "c3")));
-        await Assert.That(At(position, "b1")).IsEqualTo('N');
-
-        var black = Setup(("a1", 'K'), ("h8", 'k'), ("g7", 'p')) with
-        {
-            SideToMove = Side.Black,
-            FullmoveNumber = int.MaxValue
-        };
-        await Result<MoveCounterOverflow>(MoveRules.Apply(black, Move("g7", "g6")));
-
-        var pawn = Setup(("a1", 'K'), ("h8", 'k'), ("b2", 'P')) with
-        {
-            HalfmoveClock = int.MaxValue,
-            FullmoveNumber = int.MaxValue
-        };
-        var next = await Result<Position>(MoveRules.Apply(pawn, Move("b2", "b3")));
-        await Assert.That(next.HalfmoveClock).IsEqualTo(0);
-        await Assert.That(next.FullmoveNumber).IsEqualTo(int.MaxValue);
-    }
 }

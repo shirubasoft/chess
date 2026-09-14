@@ -53,7 +53,7 @@ public sealed class PositionKeyTests
         var key = PositionKey.Create(position);
         await Assert.That(key).IsNotEqualTo(PositionKey.Create(position with { EnPassant = EnPassantState.None }));
         await Assert.That(key.EnPassant.Value).IsTypeOf<EnPassantTarget>();
-        await Assert.That(key).IsEqualTo(PositionKey.Create(position with { HalfmoveClock = int.MaxValue, FullmoveNumber = int.MaxValue }));
+        await Assert.That(key).IsEqualTo(PositionKey.Create(position with { HalfmoveClock = 80, FullmoveNumber = 41 }));
     }
 
     [Test]

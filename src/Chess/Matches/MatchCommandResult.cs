@@ -14,8 +14,7 @@ public union MatchCommandResult(
     KingWouldBeInCheck,
     PromotionRequired,
     InvalidPromotion,
-    CastlingUnavailable,
-    MoveCounterOverflow)
+    CastlingUnavailable)
 {
     public static MatchAlreadyFinished AlreadyFinished { get; } = new();
 

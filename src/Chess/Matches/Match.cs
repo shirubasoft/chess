@@ -84,8 +84,7 @@ public static class Match
             Checkmate mate => new MatchWon { Winner = mate.Winner, Reason = WinReason.Checkmate },
             Stalemate => new MatchDrawn { Reason = DrawReason.Stalemate },
             DeadPosition => new MatchDrawn { Reason = DrawReason.DeadPosition },
-            MatingContinuationExists => HistoryOutcome(history),
-            UndeterminedPosition => HistoryOutcome(history)
+            OngoingPosition => HistoryOutcome(history)
         };
     }
 
@@ -152,7 +151,6 @@ public static class Match
         KingWouldBeInCheck rejection => rejection,
         PromotionRequired rejection => rejection,
         InvalidPromotion rejection => rejection,
-        CastlingUnavailable rejection => rejection,
-        MoveCounterOverflow rejection => rejection
+        CastlingUnavailable rejection => rejection
     };
 }

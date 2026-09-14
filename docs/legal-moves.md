@@ -12,7 +12,5 @@ overload accepting a `Side` queries that side.
 The rules operate on valid chess positions. `Position.Initial` and accepted moves
 preserve that invariant.
 
-Move counters do not affect chess legality. Queries can therefore return a move
-that `Apply` rejects with `MoveCounterOverflow` when its resulting counters cannot
-fit in an integer. Each query reads the immutable position supplied to it, so
-partial and repeated enumeration preserve the same board.
+Each query reads the immutable position supplied to it, so partial and repeated
+enumeration preserve the same board.

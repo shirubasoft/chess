@@ -123,12 +123,14 @@ public sealed class LegalMoveTests
     }
 
     [Test]
-    public async Task CounterOverflowDoesNotChangeChessLegality()
+    public async Task MoveCountersDoNotChangeLegalMoves()
     {
-        var position = Position.Initial with { HalfmoveClock = int.MaxValue, FullmoveNumber = int.MaxValue, SideToMove = Side.Black };
+        var position = Position.Initial with { HalfmoveClock = 80, FullmoveNumber = 41 };
         await Assert.That(MoveRules.HasLegalMove(position)).IsTrue();
-        await Assert.That(MoveRules.GetLegalMoves(position).Count()).IsEqualTo(20);
-        await Result<MoveCounterOverflow>(MoveRules.Apply(position, Move("e7", "e5")));
+        await Assert.That(MoveRules.GetLegalMoves(position).SequenceEqual(MoveRules.GetLegalMoves(Position.Initial))).IsTrue();
+        var next = await Result<Position>(MoveRules.Apply(position, Move("e2", "e4")));
+        await Assert.That(next.HalfmoveClock).IsEqualTo(0);
+        await Assert.That(next.FullmoveNumber).IsEqualTo(41);
     }
 
     private static int Perft(Position position, int depth)
