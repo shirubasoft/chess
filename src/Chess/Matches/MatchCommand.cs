@@ -1,6 +1,6 @@
 namespace Chess;
 
-public union MatchCommand(PlayMove, ClaimDraw, Resign);
+public union MatchCommand(PlayMove, ClaimDraw, Resign, OfferDraw, AcceptDraw, DeclineDraw);
 
 public sealed record Resign
 {
@@ -44,4 +44,19 @@ public sealed class CurrentPositionClaim
 public sealed record IntendedMoveClaim
 {
     public required MoveRequest Move { get; init; }
+}
+
+public sealed record OfferDraw
+{
+    public required Side Player { get; init; }
+}
+
+public sealed record AcceptDraw
+{
+    public required Side Player { get; init; }
+}
+
+public sealed record DeclineDraw
+{
+    public required Side Player { get; init; }
 }

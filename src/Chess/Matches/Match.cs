@@ -1,11 +1,11 @@
 namespace Chess;
 
-public static class Match
+public static partial class Match
 {
     public static MatchState Start(Position? initial = null)
     {
         var history = PositionHistory.Start(initial ?? Position.Initial);
-        return State(history, Adjudicate(history));
+        return State(history, Adjudicate(history), 0, DrawOfferState.None);
     }
 
     public static MatchCommandResult Decide(MatchState state, MatchCommand command)
@@ -13,7 +13,7 @@ public static class Match
         return state switch
         {
             FinishedMatch => MatchCommandResult.AlreadyFinished,
-            OngoingMatch ongoing => Decide(ongoing.History, command)
+            OngoingMatch ongoing => Decide(ongoing, command)
         };
     }
 
@@ -23,12 +23,16 @@ public static class Match
         {
             throw new InvalidOperationException("A finished match cannot accept more events.");
         }
+        RequirePredecessor(ongoing, @event);
         var history = ongoing.History;
         return @event switch
         {
-            MovePlayed played => ApplyMove(history, played),
+            MovePlayed played => ApplyMove(ongoing, played),
             DrawClaimed claimed => ApplyClaim(history, claimed),
-            PlayerResigned resigned => ApplyResignation(history, resigned)
+            PlayerResigned resigned => new FinishedMatch(history, resigned.Result, resigned.Revision),
+            DrawOffered offered => ApplyOffer(ongoing, offered),
+            DrawOfferDeclined declined => ApplyDecline(ongoing, declined),
+            DrawAgreed agreed => ApplyAgreement(ongoing, agreed)
         };
     }
 
@@ -42,39 +46,48 @@ public static class Match
         return state;
     }
 
-    private static MatchCommandResult Decide(PositionHistory history, MatchCommand command)
+    private static MatchCommandResult Decide(OngoingMatch ongoing, MatchCommand command)
     {
-        var player = command switch { PlayMove play => play.Player, ClaimDraw claim => claim.Player, Resign resign => resign.Player };
-        if (command is not Resign && !player.Equals(history.Current.SideToMove))
+        var history = ongoing.History;
+        var player = command switch
+        {
+            PlayMove play => play.Player, ClaimDraw claim => claim.Player, Resign resign => resign.Player,
+            OfferDraw offer => offer.Player, AcceptDraw accept => accept.Player, DeclineDraw decline => decline.Player
+        };
+        if (command is PlayMove or ClaimDraw && !player.Equals(history.Current.SideToMove))
         {
             return new WrongPlayer { Expected = history.Current.SideToMove, Actual = player };
         }
         return command switch
         {
             PlayMove play => ResolveMove(MoveRules.Apply(history.Current, play.Move), next =>
-                new CommandAccepted(new MovePlayed(history.Keys.Count, history.CurrentKey, play.Move, Adjudicate(history.Record(next))))),
-            ClaimDraw claim => DecideClaim(history, claim),
-            Resign resign => DecideResignation(history, resign)
+                new CommandAccepted(new MovePlayed(ongoing.Revision + 1, history.Keys.Count, history.CurrentKey, play.Move, Adjudicate(history.Record(next))))),
+            ClaimDraw claim => DecideClaim(ongoing, claim),
+            Resign resign => DecideResignation(ongoing, resign),
+            OfferDraw offer => DecideOffer(ongoing, offer),
+            AcceptDraw accept => DecideAcceptance(ongoing, accept),
+            DeclineDraw decline => DecideDecline(ongoing, decline)
         };
     }
 
-    private static MatchCommandResult DecideResignation(PositionHistory history, Resign resign)
+    private static MatchCommandResult DecideResignation(OngoingMatch ongoing, Resign resign)
     {
+        var history = ongoing.History;
         Side opponent = resign.Player switch { White => Side.Black, Black => Side.White };
         MatchResult result = MatingMaterial.IsKnownInsufficient(history.Current.Board, opponent)
             ? new MatchDrawn { Reason = DrawReason.ResignationWithoutMatingMaterial }
             : new MatchWon { Winner = opponent, Reason = WinReason.Resignation };
-        return new CommandAccepted(new PlayerResigned(history.Keys.Count - 1, history.CurrentKey, resign.Player, result));
+        return new CommandAccepted(new PlayerResigned(ongoing.Revision + 1, history.Keys.Count - 1, history.CurrentKey, resign.Player, result));
     }
 
-    private static MatchCommandResult DecideClaim(PositionHistory history, ClaimDraw claim) => claim.Timing switch
+    private static MatchCommandResult DecideClaim(OngoingMatch ongoing, ClaimDraw claim) => claim.Timing switch
     {
-        CurrentPositionClaim => Claim(history, claim, history.Current, history.CurrentOccurrences),
-        IntendedMoveClaim intended => ResolveMove(MoveRules.Apply(history.Current, intended.Move), next =>
-            Claim(history, claim, next, history.Occurrences(PositionKey.Create(next)) + 1))
+        CurrentPositionClaim => Claim(ongoing, claim, ongoing.History.Current, ongoing.History.CurrentOccurrences),
+        IntendedMoveClaim intended => ResolveMove(MoveRules.Apply(ongoing.History.Current, intended.Move), next =>
+            Claim(ongoing, claim, next, ongoing.History.Occurrences(PositionKey.Create(next)) + 1))
     };
 
-    private static MatchCommandResult Claim(PositionHistory history, ClaimDraw claim, Position position, int occurrences)
+    private static MatchCommandResult Claim(OngoingMatch ongoing, ClaimDraw claim, Position position, int occurrences)
     {
         var available = claim.Reason switch
         {
@@ -82,8 +95,9 @@ public static class Match
             DrawClaimReason.FiftyMoveRule => position.HalfmoveClock >= 100,
             _ => false
         };
+        var history = ongoing.History;
         return available
-            ? new CommandAccepted(new DrawClaimed(history.Keys.Count - 1, history.CurrentKey, claim.Reason, claim.Timing))
+            ? new CommandAccepted(new DrawClaimed(ongoing.Revision + 1, history.Keys.Count - 1, history.CurrentKey, claim.Reason, claim.Timing))
             : MatchCommandResult.DrawClaimUnavailable;
     }
 
@@ -112,47 +126,51 @@ public static class Match
         return MatchProgress.Continue;
     }
 
-    private static MatchState State(PositionHistory history, MatchProgress progress) => progress switch
+    private static MatchState State(PositionHistory history, MatchProgress progress, int revision, DrawOfferState offer) => progress switch
     {
-        PlayContinues => new OngoingMatch(history),
-        MatchWon won => new FinishedMatch(history, won),
-        MatchDrawn drawn => new FinishedMatch(history, drawn)
+        PlayContinues => new OngoingMatch(history, revision, offer),
+        MatchWon won => new FinishedMatch(history, won, revision),
+        MatchDrawn drawn => new FinishedMatch(history, drawn, revision)
     };
 
-    private static MatchState ApplyMove(PositionHistory history, MovePlayed played)
+    private static MatchState ApplyMove(OngoingMatch ongoing, MovePlayed played)
     {
-        RequirePredecessor(history, played.Ply - 1, played.PreviousKey);
+        var history = ongoing.History;
         var position = MoveRules.Apply(history.Current, played.Move) switch
         {
             Position accepted => accepted,
             _ => throw new InvalidOperationException("The recorded move is illegal in this event stream.")
         };
-        return State(history.Record(position), played.Progress);
+        var offer = ongoing.DrawOffer is PendingDrawOffer pending && !pending.Player.Equals(history.Current.SideToMove)
+            ? DrawOfferState.None : ongoing.DrawOffer;
+        return State(history.Record(position), played.Progress, played.Revision, offer);
     }
 
     private static MatchState ApplyClaim(PositionHistory history, DrawClaimed claimed)
     {
-        RequirePredecessor(history, claimed.Ply, claimed.PreviousKey);
         var reason = claimed.Reason switch
         {
             DrawClaimReason.ThreefoldRepetition => DrawReason.ThreefoldRepetition,
             DrawClaimReason.FiftyMoveRule => DrawReason.FiftyMoveRule,
             _ => throw new InvalidOperationException("Unknown recorded draw claim.")
         };
-        return new FinishedMatch(history, new MatchDrawn { Reason = reason });
+        return new FinishedMatch(history, new MatchDrawn { Reason = reason }, claimed.Revision);
     }
 
-    private static MatchState ApplyResignation(PositionHistory history, PlayerResigned resigned)
+    private static void RequirePredecessor(OngoingMatch ongoing, MatchEvent @event)
     {
-        RequirePredecessor(history, resigned.Ply, resigned.PreviousKey);
-        return new FinishedMatch(history, resigned.Result);
-    }
-
-    private static void RequirePredecessor(PositionHistory history, int ply, PositionKey key)
-    {
-        if (history.Keys.Count - 1 != ply || history.CurrentKey != key)
+        var (revision, ply, key) = @event switch
         {
-            throw new InvalidOperationException("The event does not follow this match position.");
+            MovePlayed played => (played.Revision, played.Ply - 1, played.PreviousKey),
+            DrawClaimed claimed => (claimed.Revision, claimed.Ply, claimed.PreviousKey),
+            PlayerResigned resigned => (resigned.Revision, resigned.Ply, resigned.PreviousKey),
+            DrawOffered offered => (offered.Revision, offered.Ply, offered.PreviousKey),
+            DrawOfferDeclined declined => (declined.Revision, declined.Ply, declined.PreviousKey),
+            DrawAgreed agreed => (agreed.Revision, agreed.Ply, agreed.PreviousKey)
+        };
+        if (revision != ongoing.Revision + 1 || ongoing.History.Keys.Count - 1 != ply || ongoing.History.CurrentKey != key)
+        {
+            throw new InvalidOperationException("The event does not follow this match state.");
         }
     }
 

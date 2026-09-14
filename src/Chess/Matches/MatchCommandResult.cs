@@ -7,6 +7,9 @@ public union MatchCommandResult(
     MatchAlreadyFinished,
     WrongPlayer,
     DrawClaimUnavailable,
+    DrawOfferAlreadyPending,
+    NoPendingDrawOffer,
+    DrawAgreementUnavailable,
     SourceSquareEmpty,
     WrongSideToMove,
     FriendlyPieceOnDestination,
@@ -21,6 +24,12 @@ public union MatchCommandResult(
     public static MatchAlreadyFinished AlreadyFinished { get; } = new();
 
     public static DrawClaimUnavailable DrawClaimUnavailable { get; } = new();
+
+    public static DrawOfferAlreadyPending DrawOfferAlreadyPending { get; } = new();
+
+    public static NoPendingDrawOffer NoPendingDrawOffer { get; } = new();
+
+    public static DrawAgreementUnavailable DrawAgreementUnavailable { get; } = new();
 }
 
 public sealed class CommandAccepted
@@ -48,6 +57,27 @@ public sealed record WrongPlayer
 public sealed class DrawClaimUnavailable
 {
     internal DrawClaimUnavailable()
+    {
+    }
+}
+
+public sealed class DrawOfferAlreadyPending
+{
+    internal DrawOfferAlreadyPending()
+    {
+    }
+}
+
+public sealed class NoPendingDrawOffer
+{
+    internal NoPendingDrawOffer()
+    {
+    }
+}
+
+public sealed class DrawAgreementUnavailable
+{
+    internal DrawAgreementUnavailable()
     {
     }
 }
