@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Chess.Contracts;
 using Chess.Server.Application;
+using Chess.Server.Akka;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
@@ -9,7 +10,7 @@ namespace Chess.Server;
 
 public sealed class GameServerOptions
 {
-    public string Backend { get; set; } = "Postgres";
+    public string Backend { get; set; } = "Akka";
     [Range(50, 10000)] public int PollIntervalMilliseconds { get; set; } = 250;
     public string[] AllowedOrigins { get; set; } = [];
 }
@@ -23,7 +24,7 @@ public static class GameServer
         builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
         builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 32 * 1024);
         builder.Services.AddOptions<GameServerOptions>().BindConfiguration("Chess")
-            .ValidateDataAnnotations().Validate(o => o.Backend == "Postgres", "Chess:Backend must be Postgres.")
+            .ValidateDataAnnotations().Validate(o => o.Backend is "Postgres" or "Akka", "Chess:Backend must be Postgres or Akka.")
             .ValidateOnStart();
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
@@ -36,7 +37,8 @@ public static class GameServer
         builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(builder.Configuration.GetConnectionString("chess")
             ?? throw new InvalidOperationException("ConnectionStrings:chess is required. Start through Aspire or supply PostgreSQL configuration.")));
         builder.Services.AddSingleton<PostgresGameStore>();
-        builder.Services.AddSingleton<IGameBackend, PostgresGameBackend>();
+        if ((builder.Configuration["Chess:Backend"] ?? "Akka") == "Akka") builder.Services.AddAkkaGames();
+        else builder.Services.AddSingleton<IGameBackend, PostgresGameBackend>();
         builder.Services.AddHostedService<InitializeStorage>();
         builder.Services.AddHealthChecks().AddCheck<PostgresHealthCheck>("postgres");
         builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>

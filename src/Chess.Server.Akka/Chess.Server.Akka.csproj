@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Chess.Server.Application/Chess.Server.Application.csproj" />
+    <PackageReference Include="Akka.Cluster.Hosting" />
+    <PackageReference Include="OpenTelemetry.Api" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>

@@ -13,6 +13,21 @@ volume and injects its connection string into the server. `Chess:Backend` select
 the command executor. The AppHost passes its `backend` parameter to this setting.
 For a separately hosted server, set `ConnectionStrings__chess` and `Chess__Backend`.
 
+Select Akka with `--Parameters:backend=Akka` after the Aspire command's `--`
+separator. Akka.Hosting manages the actor system, and cluster sharding routes each
+game UUID to one actor. `ReceiveAsync` suspends that actor's mailbox while its
+PostgreSQL transaction runs. Idle entities passivate and reactivate on demand.
+Durable game data remains in the common PostgreSQL format, so changing executors
+does not require a game migration.
+
+`Chess:Akka` binds the remoting hostname/port, seed nodes, shard count, request
+timeout, and idle timeout. An empty seed list forms a local single-node cluster
+on an automatically assigned port. Configure reachable seed addresses and stable
+ports for multiple nodes. Every node in the cluster must use the same shard count.
+The readiness endpoint requires the Akka member to reach `Up`. Remoting uses
+versioned game message serializers. An HTTP timeout can occur after a commit;
+retry the same request ID to recover the committed response.
+
 The server hosts untimed standard chess. Match decisions use the core's
 [documented adjudication scope](position-outcomes.md). `Chess.Notation` parses
 incoming SAN/UCI moves and optional FEN setups.
@@ -112,6 +127,7 @@ Run the real PostgreSQL/HTTP/SSE/WebSocket suite with:
 
 ```sh
 bash scripts/test-server.sh Postgres
+bash scripts/test-server.sh Akka
 ```
 
 The script starts an isolated Aspire application and stops it after the tests.
