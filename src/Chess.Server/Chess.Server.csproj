@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="../Chess.Server.Application/Chess.Server.Application.csproj" />
+    <ProjectReference Include="../Chess.ServiceDefaults/Chess.ServiceDefaults.csproj" />
+  </ItemGroup>
+</Project>

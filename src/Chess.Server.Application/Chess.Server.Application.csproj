@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Chess.Contracts/Chess.Contracts.csproj" />
+    <ProjectReference Include="../Chess.Notation/Chess.Notation.csproj" />
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+</Project>
