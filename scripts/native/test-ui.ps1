@@ -10,6 +10,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'diagnostics.ps1')
+. (Join-Path $PSScriptRoot 'android-artifacts.ps1')
 $runStartedAt = [DateTimeOffset]::UtcNow
 Set-Location (Join-Path $PSScriptRoot '../..')
 $artifactPath = [IO.Path]::GetFullPath($ArtifactDirectory)
@@ -22,6 +23,8 @@ $ownsServer = [string]::IsNullOrWhiteSpace($Server)
 $startedPostgres = $false
 $nativeProcess = $null
 $reversePort = $null
+$androidScreenshotAttempted = $false
+$androidDiagnosticsSaved = $false
 
 function Invoke-Checked([string]$Command, [string[]]$Arguments) {
     & $Command @Arguments
@@ -136,11 +139,19 @@ try {
     if ([DateTimeOffset]$report.startedAt -lt $startedAt.AddSeconds(-5)) { throw 'The native verification report is stale.' }
     if ([Uri]$report.server -ne $serverUri) { throw 'The native client verified against a different server.' }
     if (@($report.checks).Count -ne 8 -or -not $report.gameId) { throw 'The native verification report is incomplete.' }
+    if ($Platform -eq 'Android') {
+        $androidScreenshotAttempted = $true
+        Save-AndroidScreenshot $Device $screenshotPath $artifactPath
+    }
     Write-Host "$Platform native UI passed all $(@($report.checks).Count) crossplay checks with $Backend."
 }
 catch {
     $verificationFailure = $_
     Write-NativeDiagnostic (Join-Path $artifactPath 'verification-failure.log') ($verificationFailure | Out-String)
+    if ($Platform -eq 'Android') {
+        try { Save-AndroidDiagnostics $Device $artifactPath -Failure; $androidDiagnosticsSaved = $true }
+        catch { Write-Warning "Could not retain all Android diagnostics: $($_.Exception.Message)" }
+    }
     try { Save-NativeFailureDiagnostics $artifactPath $apphost $runStartedAt }
     catch { Write-Warning "Could not retain all Aspire diagnostics: $($_.Exception.Message)" }
     throw $verificationFailure
@@ -151,10 +162,15 @@ finally {
     }
     if ($nativeProcess) { Stop-Desktop $nativeProcess }
     if ($Platform -eq 'Android') {
-        & adb -s $Device shell screencap -p /sdcard/chess-native-verification.png | Out-Null
-        if ($LASTEXITCODE -eq 0) { & adb -s $Device pull /sdcard/chess-native-verification.png $screenshotPath | Out-Null }
-        & adb -s $Device logcat -d -s 'ChessVerification:I' 'AndroidRuntime:E' '*:S' > (Join-Path $artifactPath 'android-verification.log')
-        if ($reversePort) { & adb -s $Device reverse --remove $reversePort | Out-Null }
+        if (-not $androidScreenshotAttempted) {
+            try { Save-AndroidScreenshot $Device $screenshotPath $artifactPath }
+            catch { Write-Warning "Could not capture the Android failure screen: $($_.Exception.Message)" }
+        }
+        if (-not $androidDiagnosticsSaved) {
+            try { Save-AndroidDiagnostics $Device $artifactPath }
+            catch { Write-Warning "Could not retain the Android verification log: $($_.Exception.Message)" }
+        }
+        if ($reversePort) { Remove-AndroidReverse $Device $reversePort $artifactPath }
     }
     if ($ownsServer) {
         & aspire resource server stop --apphost $apphost --non-interactive --nologo | Out-Null

@@ -47,6 +47,7 @@ public sealed partial class ChessWindow : Window
             ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Chess.Windows", "session");
         session = new GameSession("Chess Windows", settingsPath, Environment.GetEnvironmentVariable("CHESS_SERVER") ?? "http://localhost:5080/");
         Title = "Chess"; Width = 980; Height = 860; MinWidth = 780; MinHeight = 650;
+        FitInitialWindowToWorkArea();
         FontFamily = new FontFamily("Segoe UI"); FontSize = 14; Background = new SolidColorBrush(Color.FromRgb(247, 247, 243));
         var root = new DockPanel { Margin = new Thickness(24), LastChildFill = true }; Content = root;
         var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
@@ -96,6 +97,7 @@ public sealed partial class ChessWindow : Window
         var verification = recording >= 0 ? recording : Array.IndexOf(args, "--verify-ui");
             if (verification >= 0 && verification + 1 < args.Length)
             {
+                using var inputLog = BeginVerificationInputLog(args[verification + 1]);
                 var success = await NativeUiVerification.RunAsync(session, (id, text) => { if (id == "game-code") code.Text = text; else notation.Text = text; },
                     id => (id.StartsWith("square-", StringComparison.Ordinal) ? squares[id[7..]] : namedCommands[id]).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)),
                     id => id switch
@@ -103,6 +105,7 @@ public sealed partial class ChessWindow : Window
                         "access-codes" => access.Text, "opponent-client" => opponent.Text, "move-history" => history.Text,
                         _ => AutomationProperties.GetName(squares[id[7..]])
                     }, args[verification + 1], DragInputAsync, recording >= 0);
+                verificationInputLog = null;
                 var screenshot = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);
                 screenshot.Render(this);
                 var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(screenshot));
@@ -118,6 +121,18 @@ public sealed partial class ChessWindow : Window
     {
         var button = new Button { Content = label, Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 3, 6, 3), MinHeight = 34 };
         Identify(button, id, label); button.Click += async (_, _) => await action(); commands.Add(button); namedCommands.Add(id, button); return button;
+    }
+
+    private void FitInitialWindowToWorkArea()
+    {
+        var area = SystemParameters.WorkArea;
+        MinWidth = Math.Min(MinWidth, area.Width);
+        MinHeight = Math.Min(MinHeight, area.Height);
+        Width = Math.Min(Width, area.Width);
+        Height = Math.Min(Height, area.Height);
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Left = area.Left + (area.Width - Width) / 2;
+        Top = area.Top + (area.Height - Height) / 2;
     }
 
     private static FrameworkElement Field(string label, TextBox entry, string id)
