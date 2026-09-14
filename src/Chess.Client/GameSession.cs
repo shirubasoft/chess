@@ -7,6 +7,7 @@ public sealed class GameSession : IDisposable
 {
     private readonly string settingsPath;
     private readonly SemaphoreSlim operation = new(1, 1);
+    private readonly SemaphoreSlim refresh = new(1, 1);
     private readonly CancellationTokenSource lifetime = new();
     private HttpClient http;
     private ChessClient client;
@@ -107,11 +108,47 @@ public sealed class GameSession : IDisposable
         Message = "Game restored. Your side is saved on this device.";
     });
 
-    public Task RefreshAsync() => RunAsync(async () =>
+    public Task RefreshAsync() => RefreshAsync(announce: true);
+
+    private async Task RefreshAsync(bool announce)
     {
-        if (Access is { } access) Update(await client.GetAsync(access, lifetime.Token));
-        Message = Access is null ? "Join or create a game first." : "Up to date.";
-    });
+        if (!await refresh.WaitAsync(0, lifetime.Token)) return;
+        try
+        {
+            if (Access is not { } access)
+            {
+                if (announce && !IsBusy)
+                {
+                    Message = "Join or create a game first.";
+                    Changed?.Invoke();
+                }
+                return;
+            }
+            var requestClient = client;
+            var previousMessage = Message;
+            try
+            {
+                var snapshot = await requestClient.GetAsync(access, lifetime.Token);
+                if (!IsCurrentConnection(requestClient, access)) return;
+                Update(snapshot);
+                if (announce && !IsBusy && Message == previousMessage) Message = "Up to date.";
+                Changed?.Invoke();
+            }
+            catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+            catch (Exception exception) when (exception is HttpRequestException or ChessServerException or IOException or TaskCanceledException or JsonException)
+            {
+                if (!IsCurrentConnection(requestClient, access) || IsBusy || Message != previousMessage) return;
+                Message = exception is TaskCanceledException ? "The server did not respond. Check the address and refresh."
+                    : exception.Message;
+                Changed?.Invoke();
+            }
+        }
+        finally { refresh.Release(); }
+    }
+
+    private bool IsCurrentConnection(ChessClient requestClient, GameAccess access) =>
+        ReferenceEquals(client, requestClient) && Access is { } current && current.GameId == access.GameId
+        && current.Side == access.Side && current.Code == access.Code;
 
     public Task<bool> MoveAsync(string notation) => RunAsync(async () =>
     {
@@ -174,7 +211,7 @@ public sealed class GameSession : IDisposable
             while (await timer.WaitForNextTickAsync(linked.Token))
             {
                 if (Access is null || IsBusy) continue;
-                await RefreshAsync();
+                await RefreshAsync(announce: false);
             }
         }
         catch (OperationCanceledException) when (linked.IsCancellationRequested) { }
