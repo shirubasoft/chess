@@ -12,6 +12,9 @@ jobs:
   server-e2e:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      matrix:
+        backend: [Postgres, Akka]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -21,12 +24,12 @@ jobs:
       - name: Install Aspire
         run: dotnet tool install --global Aspire.Cli --version 13.5.3
       - name: Validate PostgreSQL server and event transports
-        run: bash scripts/test-server.sh Postgres
+        run: bash scripts/test-server.sh '${{ matrix.backend }}'
       - name: Upload server test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: server-test-results
+          name: server-test-results-${{ matrix.backend }}
           path: TestResults/
 
   tests:

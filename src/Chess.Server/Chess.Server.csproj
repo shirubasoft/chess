@@ -2,5 +2,6 @@
   <ItemGroup>
     <ProjectReference Include="../Chess.Server.Application/Chess.Server.Application.csproj" />
     <ProjectReference Include="../Chess.ServiceDefaults/Chess.ServiceDefaults.csproj" />
+    <ProjectReference Include="../Chess.Server.Akka/Chess.Server.Akka.csproj" />
   </ItemGroup>
 </Project>

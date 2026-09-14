@@ -1,6 +1,6 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var backend = builder.AddParameter("backend", "Postgres");
+var backend = builder.AddParameter("backend", "Akka");
 var database = builder.AddPostgres("postgres")
     .WithDataVolume()
     .WithLifetime(ContainerLifetime.Persistent)
