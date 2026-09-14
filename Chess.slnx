@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/clients/">
+    <Project Path="clients/Chess.Cli/Chess.Cli.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Chess/Chess.csproj" />
     <Project Path="src/Chess.Notation/Chess.Notation.csproj" />

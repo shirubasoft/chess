@@ -28,6 +28,16 @@ jobs:
       - name: Resume games after switching actor frameworks
         if: matrix.backend == 'Akka'
         run: bash scripts/test-backend-switch.sh
+      - name: Package and install the dotnet chess command
+        run: |
+          dotnet pack clients/Chess.Cli --configuration Release --no-build --output artifacts/packages
+          dotnet tool install Chess.Cli --tool-path artifacts/cli-tool --source artifacts/packages
+          PATH="$PWD/artifacts/cli-tool:$PATH" dotnet chess help
+      - name: Upload CLI package
+        uses: actions/upload-artifact@v4
+        with:
+          name: chess-cli-${{ matrix.backend }}
+          path: artifacts/packages/*.nupkg
       - name: Upload server test results
         if: always()
         uses: actions/upload-artifact@v4

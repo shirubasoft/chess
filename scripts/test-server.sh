@@ -14,3 +14,4 @@ aspire wait server --apphost "$apphost" --non-interactive
 CHESS_TEST_SERVER="$(aspire describe --apphost "$apphost" --format Json --non-interactive | python3 scripts/server-url.py "$backend")"
 export CHESS_TEST_SERVER
 dotnet test --project tests/Chess.Server.Tests/Chess.Server.Tests.csproj --configuration Release
+dotnet test --project tests/Chess.Cli.Tests/Chess.Cli.Tests.csproj --configuration Release
