@@ -22,6 +22,14 @@ public sealed partial class ChessWindow
         var writer = File.CreateText(Path.ChangeExtension(reportPath, ".input.log"));
         writer.AutoFlush = true;
         verificationInputLog = writer;
+        PreProcessInputEventHandler beforeInput = (_, e) =>
+        {
+            if (e.StagingItem.Input is MouseButtonEventArgs { ChangedButton: MouseButton.Left } button
+                && button.RoutedEvent == Mouse.PreviewMouseUpEvent)
+                TraceVerificationInput("preprocess-up", button);
+        };
+        InputManager.Current.PreProcessInput += beforeInput;
+        Closed += (_, _) => InputManager.Current.PreProcessInput -= beforeInput;
         AddHandler(Mouse.PreviewMouseDownEvent, new MouseButtonEventHandler((_, e) =>
         {
             verificationMouseDowns++;
