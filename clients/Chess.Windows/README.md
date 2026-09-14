@@ -23,3 +23,5 @@ dotnet run --project clients/Chess.Windows -- --verify-ui artifacts/native/windo
 ```
 
 The exit code reports success or failure, the JSON report contains the checked interactions and server state, and a PNG next to the report captures the rendered window. WPF controls expose stable `AutomationProperties.AutomationId` values for external UI automation. The shared scenario is in `tests/Chess.Native.Tests`.
+
+Drag one of your movable pieces to a legal destination, or select the source and destination with clicks. The moving piece follows the pointer while its source and legal destinations remain marked. Releasing outside the board, Escape or lost input, or a changed game position cancels the drag. Dragging a pawn onto its final rank opens the promotion choices. SAN and UCI entry remain available.

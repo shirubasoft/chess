@@ -2,7 +2,7 @@
 
 `native-clients.yml` executes the GTK, WPF, and Android applications against both Akka and Orleans. Each job builds its native application before starting the server, starts AppHost through Aspire CLI 13.5.3, waits for server health, and reads the server endpoint from `aspire describe --format Json`. The script checks the resolved `Chess__Backend` value before running any UI scenario.
 
-The application drives its actual native buttons and text fields, then verifies server state from an opponent using `Chess.Client`. It checks game creation and side codes, board clicks, opponent name, polling, SAN entry and history, resignation, joining by code, and knight promotion. A fresh JSON report must contain `success: true` and all five completed check groups. The workflow uploads the reports, screenshots, application logs, and Android ARM64 Release APKs. Generated side-code settings and raw Aspire resource descriptions are excluded from uploads.
+The application drives its actual native buttons and text fields, then verifies server state from an opponent using `Chess.Client`. It checks game creation and side codes, board clicks and drags, rejected or canceled gestures, revision changes during a held gesture, Black orientation, opponent name, polling, SAN entry and history, resignation, joining by code, and knight promotion. A fresh JSON report must contain `success: true` and every completed check group required by the script. The workflow uploads the reports, screenshots, application logs, and Android ARM64 Release APKs. Generated side-code settings and raw Aspire resource descriptions are excluded from uploads.
 
 On startup or health-check failure, the script saves the Aspire startup output and collects bounded server, resource-state, and CLI logs before teardown. These diagnostics are redacted and uploaded with the native evidence. Collection does not change the failing test result. Run `pwsh -NoProfile -File scripts/native/test-diagnostics.ps1` to check that redaction removes credentials while retaining error and stack-trace text.
 
@@ -10,7 +10,7 @@ On startup or health-check failure, the script saves the Aspire startup output a
 
 Install the SDK selected by `global.json`, .NET 10 for AppHost, PowerShell 7, Aspire CLI 13.5.3, and the platform dependencies listed in the workflow. Build the desired client first. The scripts run from any working directory and launch compiled assemblies without rebuilding shared files while the server is running.
 
-Linux requires GTK4, Xvfb, ImageMagick, and DejaVu fonts:
+Linux requires GTK4, Xvfb, XTest (`libxtst6` on Ubuntu), ImageMagick, and DejaVu fonts:
 
 ```sh
 dotnet build clients/Chess.Linux/Chess.Linux.csproj -c Release
@@ -43,4 +43,8 @@ The Android script installs the APK, resets only the app's verification session,
 
 Pass `-Server http://localhost:PORT` to reuse the current checkout's running Aspire server without stopping it afterward. The supplied URL and backend must match the running server's description. Pass `-ArtifactDirectory artifacts/native/orleans` to keep separate local runs, and `-Configuration Debug` when testing a desktop Debug build. Android always executes the Debug x64 APK.
 
-The native scenario runs inside each application's UI thread and invokes native controls. This verifies rendered board state and client/server behavior; it does not simulate hardware touch, keyboard navigation, screen-reader interaction, or physical ARM64 devices. Stable control IDs also support separate external accessibility automation.
+The native scenario invokes buttons and entries on the application UI thread. Drag verification sends mouse events through XTest on the isolated Linux display, native Windows mouse and Escape key events, and Android `MotionEvent` sequences through the window's `DecorView`. These events pass through the actual gesture handlers, including cancellation and coordinate mapping. The report checks both rendered state and the server from a separate client. Physical ARM64 devices and screen-reader interaction require separate verification.
+
+## Paced gameplay capture
+
+Desktop clients accept `--record-gameplay <report.json>` with `CHESS_SERVER` and an isolated `CHESS_SETTINGS_PATH`. Android accepts the `record_gameplay` boolean Intent extra alongside `server`, and writes its private `files/verification.json`. This test-only mode creates a game against a visibly labeled scripted opponent and plays Scholar's Mate with routed native drags for each White move. It pauses between positions and holds checkmate before writing the report. Record the application's real window or emulator screen separately; the mode drives gameplay and produces verification evidence.
