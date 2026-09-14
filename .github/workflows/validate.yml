@@ -18,9 +18,34 @@ jobs:
         with:
           global-json-file: global.json
       - run: dotnet restore
-      - run: dotnet test --no-restore --configuration Release
+      - run: dotnet build --no-restore --configuration Release
+      - run: dotnet test --no-build --configuration Release
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
           path: '**/TestResults/**'
+  external-validation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r tests/validation/requirements.txt
+      - run: bash tests/validation/fetch-references.sh
+      - run: dotnet build tools/Chess.Validation --configuration Release
+      - name: Compare rules, notation, history, and perft
+        run: >-
+          python tests/validation/validate.py
+          --stockfish artifacts/stockfish/stockfish/stockfish-ubuntu-x86-64
+          --corpus artifacts/standard.epd
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: external-validation
+          path: artifacts/validation-report.json
