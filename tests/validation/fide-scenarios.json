@@ -1,0 +1,78 @@
+[
+  {
+    "id": "pinned attackers still attack king destinations",
+    "article": "3.1.3",
+    "fen": "4k3/4n3/8/8/4K3/8/8/4R3 w - - 0 1",
+    "illegal": ["e4f5"],
+    "legal": ["e4d3"]
+  },
+  {
+    "id": "castling through attack is forbidden",
+    "article": "3.8.2.2",
+    "fen": "4kr2/8/8/8/8/8/8/4K2R w K - 0 1",
+    "illegal": ["e1g1"]
+  },
+  {
+    "id": "an attacked rook does not forbid castling",
+    "article": "3.8.2.2",
+    "fen": "4k2r/8/8/8/8/8/8/4K2R w K - 0 1",
+    "legal": ["e1g1"]
+  },
+  {
+    "id": "en passant cannot expose the king",
+    "article": "3.7.3.2 and 3.9.2",
+    "fen": "4k3/8/8/1K1pP1r1/8/8/8/8 w - d6 0 2",
+    "illegal": ["e5d6"]
+  },
+  {
+    "id": "en passant can remove a checking pawn",
+    "article": "3.7.3.2 and 3.9.2",
+    "fen": "8/8/8/3pP3/4K3/8/8/4k3 w - d6 0 2",
+    "legal": ["e5d6"]
+  },
+  {
+    "id": "every promotion choice for pushes and captures",
+    "article": "3.7.3.3",
+    "fen": "1r2k3/P7/8/8/8/8/8/4K3 w - - 0 1",
+    "legal": ["a7a8q", "a7a8r", "a7a8b", "a7a8n", "a7b8q", "a7b8r", "a7b8b", "a7b8n"],
+    "illegal": ["a7a8", "a7b8"]
+  },
+  {
+    "id": "checkmate",
+    "article": "5.1.1",
+    "fen": "7k/6Q1/5K2/8/8/8/8/8 b - - 0 1",
+    "outcome": "checkmate"
+  },
+  {
+    "id": "stalemate",
+    "article": "5.2.1",
+    "fen": "7k/5Q2/5K2/8/8/8/8/8 b - - 0 1",
+    "outcome": "stalemate"
+  },
+  {
+    "id": "bare kings are dead",
+    "article": "5.2.2",
+    "fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+    "outcome": "dead_position"
+  },
+  {
+    "id": "same-color bishops are dead",
+    "article": "5.2.2",
+    "fen": "4kb2/8/8/8/8/8/8/2B1K3 w - - 0 1",
+    "outcome": "dead_position"
+  },
+  {
+    "id": "two knights can mate with cooperation",
+    "article": "5.2.2",
+    "fen": "4k3/8/8/8/8/8/8/1N2K1N1 w - - 0 1",
+    "outcome": "ongoing"
+  },
+  {
+    "id": "forced capture leaves bare kings",
+    "article": "5.2.2",
+    "fen": "k7/P7/2K5/8/8/8/8/8 b - - 0 1",
+    "outcome": "dead_position",
+    "legal": ["a8a7"],
+    "referenceDifference": "python-chess checks material, so this independently reasoned FIDE fixture supplies the dead-position expectation."
+  }
+]

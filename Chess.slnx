@@ -7,4 +7,7 @@
     <Project Path="tests/Chess.Tests/Chess.Tests.csproj" />
     <Project Path="tests/Chess.Notation.Tests/Chess.Notation.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Chess.Validation/Chess.Validation.csproj" />
+  </Folder>
 </Solution>
