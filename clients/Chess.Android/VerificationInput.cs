@@ -7,6 +7,16 @@ public sealed partial class MainActivity
 {
     private async Task DragInputAsync(string source, string? destination, bool cancel = false, Func<Task>? whileHeld = null)
     {
+        var targetViews = destination is { } target ? new[] { squares[source], squares[target] } : new[] { squares[source] };
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        var waiting = false;
+        while (targetViews.Any(view => !view.IsLaidOut || view.IsLayoutRequested || view.Width == 0 || view.Height == 0))
+        {
+            if (!waiting) global::Android.Util.Log.Info("ChessVerification", $"Waiting for laid-out drag controls: {source} to {destination ?? "outside"}.");
+            waiting = true;
+            if (DateTime.UtcNow >= deadline) throw new TimeoutException("The native drag controls were not laid out.");
+            await Task.Delay(16);
+        }
         var decor = Window!.DecorView;
         var origin = new int[2]; decor.GetLocationOnScreen(origin);
         var from = new int[2]; squares[source].GetLocationOnScreen(from);
