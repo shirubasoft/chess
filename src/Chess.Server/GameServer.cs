@@ -3,6 +3,7 @@ using System.Text.Json;
 using Chess.Contracts;
 using Chess.Server.Application;
 using Chess.Server.Akka;
+using Chess.Server.Orleans;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
@@ -24,7 +25,7 @@ public static class GameServer
         builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
         builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 32 * 1024);
         builder.Services.AddOptions<GameServerOptions>().BindConfiguration("Chess")
-            .ValidateDataAnnotations().Validate(o => o.Backend is "Postgres" or "Akka", "Chess:Backend must be Postgres or Akka.")
+            .ValidateDataAnnotations().Validate(o => o.Backend is "Akka" or "Orleans", "Chess:Backend must be Akka or Orleans.")
             .ValidateOnStart();
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
@@ -37,8 +38,11 @@ public static class GameServer
         builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(builder.Configuration.GetConnectionString("chess")
             ?? throw new InvalidOperationException("ConnectionStrings:chess is required. Start through Aspire or supply PostgreSQL configuration.")));
         builder.Services.AddSingleton<PostgresGameStore>();
-        if ((builder.Configuration["Chess:Backend"] ?? "Akka") == "Akka") builder.Services.AddAkkaGames();
-        else builder.Services.AddSingleton<IGameBackend, PostgresGameBackend>();
+        switch (builder.Configuration["Chess:Backend"] ?? "Akka")
+        {
+            case "Akka": builder.Services.AddAkkaGames(); break;
+            case "Orleans": builder.AddOrleansGames(); break;
+        }
         builder.Services.AddHostedService<InitializeStorage>();
         builder.Services.AddHealthChecks().AddCheck<PostgresHealthCheck>("postgres");
         builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>

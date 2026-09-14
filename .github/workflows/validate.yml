@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        backend: [Postgres, Akka]
+        backend: [Akka, Orleans]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -25,6 +25,9 @@ jobs:
         run: dotnet tool install --global Aspire.Cli --version 13.5.3
       - name: Validate PostgreSQL server and event transports
         run: bash scripts/test-server.sh '${{ matrix.backend }}'
+      - name: Resume games after switching actor frameworks
+        if: matrix.backend == 'Akka'
+        run: bash scripts/test-backend-switch.sh
       - name: Upload server test results
         if: always()
         uses: actions/upload-artifact@v4
