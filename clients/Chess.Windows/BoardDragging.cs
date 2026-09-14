@@ -29,7 +29,10 @@ public sealed partial class ChessWindow
         PreviewMouseMove += (_, e) =>
         {
             if (boardDrag is not { } drag) return;
-            if (e.LeftButton != MouseButtonState.Pressed || !session.IsCurrentDrag(drag)) { CancelBoardDrag(); return; }
+            if (!session.IsCurrentDrag(drag)) { CancelBoardDrag(); return; }
+            // WPF can deliver final motion with the released button state before MouseUp.
+            // Keep the captured drag for MouseUp to finish; capture loss still cancels it.
+            if (e.LeftButton != MouseButtonState.Pressed) return;
             var position = e.GetPosition(board);
             if (!dragging && Math.Abs(position.X - dragStart.X) < SystemParameters.MinimumHorizontalDragDistance
                 && Math.Abs(position.Y - dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;

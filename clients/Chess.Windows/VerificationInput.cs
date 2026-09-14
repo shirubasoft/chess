@@ -24,7 +24,8 @@ public sealed partial class ChessWindow
             for (var step = 1; step <= 12; step++)
             {
                 MoveVerificationCursor(new Point(from.X + (to.X - from.X) * step / 12, from.Y + (to.Y - from.Y) * step / 12));
-                await Task.Delay(40);
+                // Batch final native motion and release before WPF processes either event.
+                if (step < 12) await Task.Delay(40);
                 if (step == 6 && whileHeld is not null)
                 {
                     TraceVerificationInput("before-remote-change");
