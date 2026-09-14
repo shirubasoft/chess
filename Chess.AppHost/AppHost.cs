@@ -12,6 +12,6 @@ builder.AddProject<Projects.Chess_Server>("server")
     .WithEndpoint(name: "orleans-silo", scheme: "tcp", env: "Chess__Orleans__SiloPort", isProxied: false)
     .WithHttpEndpoint()
     .WithHttpsEndpoint()
-    .WithHttpHealthCheck("/health");
+    .WithHttpHealthCheck("/health", endpointName: "http");
 
 builder.Build().Run();
