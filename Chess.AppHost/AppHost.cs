@@ -4,7 +4,7 @@ var backend = builder.AddParameter("backend");
 var orleansClusterId = builder.AddParameter("orleans-cluster-id");
 var database = builder.AddChessDatabase();
 
-builder.AddProject<Projects.Chess_Server>("server")
+var server = builder.AddProject<Projects.Chess_Server>("server")
     .WithReference(database)
     .WaitFor(database)
     .WithEnvironment("Chess__Backend", backend)
@@ -13,5 +13,11 @@ builder.AddProject<Projects.Chess_Server>("server")
     .WithHttpEndpoint()
     .WithHttpsEndpoint()
     .WithHttpHealthCheck("/health", endpointName: "http");
+
+builder.AddProject<Projects.Chess_Web_Host>("web")
+    .WithReference(server.GetEndpoint("http"))
+    .WaitFor(server)
+    .WithHttpEndpoint()
+    .WithHttpHealthCheck("/health");
 
 builder.Build().Run();

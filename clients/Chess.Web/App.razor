@@ -1,0 +1,197 @@
+@implements IAsyncDisposable
+
+<PageTitle>Chess · @(_snapshot is null ? "Play anywhere" : BoardPresentation.Status(_snapshot, _access!.Side))</PageTitle>
+
+<header class="site-header">
+    <a class="wordmark" href="/" aria-label="Chess home">Chess<span class="wordmark-dot">.</span></a>
+    <span class="client-label">Web <span aria-hidden="true">/</span> Play anywhere</span>
+    <a class="header-link" href="#game-controls">Join a game</a>
+</header>
+
+<main>
+    <div class="page-heading">
+        <div>
+            <h1>@(_snapshot is null ? "Your next move." : BoardPresentation.Status(_snapshot, _access!.Side))</h1>
+            <p>@HeadingDescription</p>
+        </div>
+        @if (_snapshot is not null)
+        {
+            <span class="connection-status" data-testid="connection-status"><span class="connection-dot @(_connected ? "connected" : "")"></span>@_connectionText</span>
+        }
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="error-message" role="alert" data-testid="error">@_error <button class="text-button" @onclick="() => _error = null">Dismiss</button></div>
+    }
+
+    <div class="play-layout">
+        <section class="board-area" aria-label="Chess game">
+            <div class="player-strip opponent">
+                <span class="side-token @OpponentSide.ToString().ToLowerInvariant()" aria-hidden="true"></span>
+                <div><strong data-testid="opponent-name">@OpponentName</strong><span>@OpponentSide @(_access is null ? "pieces" : "· Opponent")</span></div>
+                @if (_snapshot is { Status: GameStatus.Active } && _snapshot.SideToMove == OpponentSide)
+                {
+                    <span class="turn-indicator">To move</span>
+                }
+            </div>
+
+            <div class="board-frame">
+                <div @ref="_board" class="chessboard" role="group" aria-label="Chessboard. Drag a piece, or select a piece and then its destination." data-testid="board" data-fen="@_snapshot?.Fen" data-game-id="@_snapshot?.GameId" data-revision="@_snapshot?.Revision" data-drag-context="@DragContext">
+                    @foreach (var square in _squares)
+                    {
+                        <button @key="square.Name" type="button"
+                            class="@SquareClass(square)"
+                            data-testid="square-@square.Name" data-piece="@square.Piece" data-side="@square.Side"
+                            data-square="@square.Name" data-destinations="@DragDestinations(square.Name)"
+                            aria-label="@square.Description" aria-pressed="@(_selected == square.Name ? "true" : "false")"
+                            @onclick="() => SelectSquareAsync(square)" disabled="@(!CanPlay || _busy)">
+                            @if (square.Piece is not null)
+                            {
+                                <ChessPiece Kind="@square.Piece" Color="@square.Side!.Value" />
+                            }
+                            @if (_targets.Contains(square.Name))
+                            {
+                                <span class="legal-target @(square.Piece is null ? "" : "capture")" aria-hidden="true"></span>
+                            }
+                            @if (ShowRank(square))
+                            {
+                                <span class="coordinate rank" aria-hidden="true">@square.Name[1]</span>
+                            }
+                            @if (ShowFile(square))
+                            {
+                                <span class="coordinate file" aria-hidden="true">@square.Name[0]</span>
+                            }
+                        </button>
+                    }
+                </div>
+                @if (_promotionMoves.Length > 0)
+                {
+                    <div class="promotion-choice" role="group" aria-label="Promote pawn" data-testid="promotion">
+                        <strong>Promote to</strong>
+                        @foreach (var move in _promotionMoves)
+                        {
+                            var kind = PromotionName(move[4]);
+                            <button aria-label="Promote to @kind" data-testid="promote-@move[4]" @onclick="() => PlayAsync(move, MoveNotation.Uci)" disabled="@_busy">
+                                <ChessPiece Kind="@kind" Color="@_access!.Side" /><span>@kind</span>
+                            </button>
+                        }
+                        <button class="text-button" @onclick="ClearSelection">Cancel</button>
+                    </div>
+                }
+            </div>
+
+            <div class="player-strip you">
+                <span class="side-token @YourSide.ToString().ToLowerInvariant()" aria-hidden="true"></span>
+                <div><strong data-testid="your-name">@YourName</strong><span>@YourSide @(_access is null ? "pieces" : "· You")</span></div>
+                <button class="text-button" @onclick="FlipBoard" aria-label="Flip board">Flip board</button>
+            </div>
+
+            @if (_snapshot is not null)
+            {
+                <form class="move-entry" @onsubmit="PlayNotationAsync" @onsubmit:preventDefault>
+                    <label for="move">Enter a move</label>
+                    <div class="input-row">
+                        <select id="notation" aria-label="Move notation" @bind="_notation" disabled="@_busy">
+                            <option value="San">SAN</option><option value="Uci">UCI</option>
+                        </select>
+                        <input id="move" data-testid="move-input" @bind="_move" @bind:event="oninput" placeholder="@(_notation == MoveNotation.San ? "e.g. Nf3 or O-O" : "e.g. g1f3 or e7e8q")" autocomplete="off" spellcheck="false" autocapitalize="off" disabled="@(!CanPlay || _busy)" />
+                        <button class="primary" type="submit" data-testid="play-move" disabled="@(!CanPlay || _busy || string.IsNullOrWhiteSpace(_move))">Play</button>
+                    </div>
+                    <p class="field-hint">@(_selected is null ? "Drag a piece, or select it and then its destination." : $"Selected {_selected}. Choose a highlighted square.")</p>
+                </form>
+            }
+            else
+            {
+                <p class="board-caption">One board. Any client. Take your time.</p>
+            }
+        </section>
+
+        <aside class="game-rail">
+            @if (_snapshot is not null)
+            {
+                <section class="game-panel" aria-labelledby="game-title">
+                    <div class="section-heading"><h2 id="game-title">The game</h2><span class="revision" data-testid="revision">Rev. @_snapshot.Revision</span></div>
+                    @if (_snapshot.Status == GameStatus.Waiting)
+                    {
+                        <p class="waiting-message">@(_access!.OpponentCode is null ? "Looking for another player. You can leave this page and return with your code." : "Invite another player with the code below. They can join from any Chess client.")</p>
+                    }
+                    @if (_access!.OpponentCode is { } opponentCode && _snapshot.Black.ClientName is null)
+                    {
+                        <label class="code-label" for="opponent-code">Opponent's join code</label>
+                        <div class="code-row"><input id="opponent-code" data-testid="opponent-code" readonly value="@opponentCode" /><button class="text-button" @onclick="() => CopyAsync(opponentCode)">Copy</button></div>
+                    }
+                    @if (_snapshot.Result is { } result)
+                    {
+                        <p class="result-message" data-testid="game-result">@BoardPresentation.Status(_snapshot, _access.Side)<span>@Humanize(result.Reason)</span></p>
+                    }
+                    @if (_snapshot.DrawOfferedBy is { } offerer)
+                    {
+                        <div class="draw-notice" data-testid="draw-offer"><p>@(offerer == _access.Side ? "Your draw offer is pending." : "Your opponent offered a draw.")</p>
+                            @if (offerer != _access.Side)
+                            {
+                                <button class="primary" data-testid="accept-draw" @onclick="() => CommandAsync(GameAction.AcceptDraw)" disabled="@_busy">Accept draw</button>
+                                <button class="text-button" @onclick="() => CommandAsync(GameAction.DeclineDraw)" disabled="@_busy">Decline</button>
+                            }
+                        </div>
+                    }
+                    @if (_snapshot.Status == GameStatus.Active)
+                    {
+                        <div class="game-actions">
+                            <button data-testid="offer-draw" @onclick="() => CommandAsync(GameAction.OfferDraw)" disabled="@(_busy || _snapshot.DrawOfferedBy is not null)">Offer draw</button>
+                            <button class="text-button" data-testid="resign" @onclick="() => _confirmResign = !_confirmResign" disabled="@_busy">Resign</button>
+                        </div>
+                        @if (_confirmResign)
+                        {
+                            <div class="resign-confirm"><p>Resign this game?</p><button class="danger" data-testid="confirm-resign" @onclick="() => CommandAsync(GameAction.Resign)" disabled="@_busy">Confirm resignation</button><button class="text-button" @onclick="() => _confirmResign = false">Keep playing</button></div>
+                        }
+                        <details class="draw-claims"><summary>Claim a draw</summary><p>Use when the same position has occurred three times, or 50 moves have passed without a capture or pawn move.</p><button @onclick="() => CommandAsync(GameAction.ClaimThreefold)" disabled="@(!CanPlay || _busy)">Threefold repetition</button><button @onclick="() => CommandAsync(GameAction.ClaimFiftyMoves)" disabled="@(!CanPlay || _busy)">50-move rule</button></details>
+                    }
+
+                    <div class="history-heading"><h3>Moves</h3><span>@_snapshot.Moves.Length plies</span></div>
+                    <div class="move-history" data-testid="move-history" aria-label="Move history">
+                        @if (_snapshot.Moves.Length == 0)
+                        {
+                            <p class="empty-history">The first move is still ahead.</p>
+                        }
+                        else
+                        {
+                            <table><thead><tr><th scope="col">Move</th><th scope="col">White</th><th scope="col">Black</th></tr></thead><tbody>
+                                @foreach (var turn in _snapshot.Moves.GroupBy(move => (move.Ply + 1) / 2))
+                                {
+                                    <tr><th scope="row">@turn.Key.</th><td>@turn.FirstOrDefault(move => move.Side == PlayerSide.White)?.San</td><td>@turn.FirstOrDefault(move => move.Side == PlayerSide.Black)?.San</td></tr>
+                                }
+                            </tbody></table>
+                        }
+                    </div>
+
+                    <details class="connection-details"><summary>Game access &amp; updates</summary>
+                        <label class="code-label" for="your-code">Your private side code</label>
+                        <div class="code-row"><input id="your-code" data-testid="your-code" readonly value="@_access.Code" type="@(_showCode ? "text" : "password")" /><button class="text-button" @onclick="() => _showCode = !_showCode">@(_showCode ? "Hide" : "Show")</button><button class="text-button" @onclick="() => CopyAsync(_access.Code)">Copy</button></div>
+                        <p class="field-hint">Keep this code to resume on another client. Anyone with it can play your side.</p>
+                        <label for="update-mode">Updates</label><select id="update-mode" data-testid="update-mode" value="@_transport" @onchange="ChangeTransportAsync"><option value="Polling">Polling</option><option value="Sse">SSE</option><option value="WebSocket">WebSocket</option></select>
+                        <button @onclick="RefreshAsync" data-testid="refresh-game" disabled="@_busy">Refresh now</button>
+                        <p class="field-hint">Game ID <span class="game-id" data-testid="game-id">@_snapshot.GameId</span></p>
+                        <button class="text-button" @onclick="ForgetAsync">Close saved game</button>
+                    </details>
+                </section>
+            }
+
+            <section class="lobby-panel" id="game-controls" aria-labelledby="lobby-title">
+                <h2 id="lobby-title">@(_snapshot is null ? "Sit down. Play." : "Another game")</h2>
+                <p>@(_snapshot is null ? "Invite someone you know, or meet your next opponent." : "Save your side code before switching games.")</p>
+                <button class="primary full-width" data-testid="create-game" @onclick="CreateAsync" disabled="@_busy">Create a private game<svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10" /></svg></button>
+                <button class="full-width" data-testid="find-opponent" @onclick="MatchmakeAsync" disabled="@_busy">Find a random opponent</button>
+                <form class="join-form" @onsubmit="JoinAsync" @onsubmit:preventDefault>
+                    <label for="join-code">Have a game code?</label>
+                    <div class="input-row"><input id="join-code" data-testid="join-code" @bind="_joinCode" @bind:event="oninput" placeholder="Paste your side code" autocomplete="off" spellcheck="false" autocapitalize="off" /><button data-testid="join-game" type="submit" disabled="@(_busy || string.IsNullOrWhiteSpace(_joinCode))">Join</button></div>
+                </form>
+                @if (_busy) { <p role="status" class="field-hint">Contacting the game server…</p> }
+                <p class="crossplay-note">Play with Android, Windows, Linux, and terminal clients. No account needed.</p>
+            </section>
+        </aside>
+    </div>
+</main>
+
+<footer><span>Chess, at your pace.</span><span>Untimed · Standard chess</span></footer>
+@if (_toast is not null) { <div class="toast" role="status">@_toast</div> }

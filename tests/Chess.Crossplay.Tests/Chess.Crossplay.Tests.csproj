@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TUnit" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <ProjectReference Include="../../src/Chess.Client/Chess.Client.csproj" />
+    <ProjectReference Include="../../clients/Chess.Cli/Chess.Cli.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

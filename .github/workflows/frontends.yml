@@ -1,0 +1,35 @@
+name: Validate chess crossplay
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontends:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [Akka, Orleans]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: '10.0.x'
+      - name: Install Aspire
+        run: dotnet tool install --global Aspire.Cli --version 13.5.3
+      - name: Verify clients and every crossplay pairing
+        run: bash scripts/test-frontends.sh '${{ matrix.backend }}' --install-browser-deps
+      - name: Upload test results and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crossplay-${{ matrix.backend }}
+          path: artifacts/frontend-tests/
+          if-no-files-found: error

@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <ProjectReference Include="../src/Chess.Server/Chess.Server.csproj" />
+    <ProjectReference Include="../clients/Chess.Web/Host/Chess.Web.Host.csproj" />
   </ItemGroup>
 
 </Project>

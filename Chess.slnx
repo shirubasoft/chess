@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/clients/">
     <Project Path="clients/Chess.Cli/Chess.Cli.csproj" />
+    <Project Path="clients/Chess.Web/Chess.Web.csproj" />
+    <Project Path="clients/Chess.Web/Host/Chess.Web.Host.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Chess/Chess.csproj" />
