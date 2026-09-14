@@ -1,8 +1,10 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Chess/Chess.csproj" />
+    <Project Path="src/Chess.Notation/Chess.Notation.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Chess.Tests/Chess.Tests.csproj" />
+    <Project Path="tests/Chess.Notation.Tests/Chess.Notation.Tests.csproj" />
   </Folder>
 </Solution>

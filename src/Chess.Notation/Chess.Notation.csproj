@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Chess/Chess.csproj" />
+  </ItemGroup>
+</Project>
