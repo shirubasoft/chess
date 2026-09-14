@@ -22,4 +22,6 @@ The process exits with a failing code if verification fails. GTK widget names ar
 
 Gir.Core 0.8.1 binds GTK4. UI code uses GTK 4.0-era controls. Run the UI verification against the target distribution's GTK4 runtime when packaging for that distribution.
 
-Drag one of your movable pieces to a legal destination, or select the source and destination with clicks. The moving piece follows the pointer while its source and legal destinations remain marked. Releasing outside the board, Escape or lost input, or a changed game position cancels the drag. Dragging a pawn onto its final rank opens the promotion choices. SAN and UCI entry remain available.
+GTK keeps the board square beside move history and native controls. DejaVu Sans renders dark Unicode pieces on cream and sage squares. Selection uses a gold background, legal destinations have dark green inset borders, and keyboard focus has a blue outline.
+
+Drag one of your movable pieces to a legal destination, or select the source and destination with clicks. After movement crosses GTK's drag threshold, a translucent piece follows the pointer and its source square fades. Releasing outside the board, Escape or lost input, or a changed game position cancels the drag. Dragging a pawn onto its final rank reveals promotion buttons below the board. SAN and UCI entry remain available.

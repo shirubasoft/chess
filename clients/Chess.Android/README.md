@@ -27,4 +27,6 @@ adb shell run-as org.shirubasoft.chess cat files/verification.json
 
 The activity has an explicit stable name. The verification uses a separate private settings file. Its shared scenario is in `tests/Chess.Native.Tests`.
 
-Drag one of your movable pieces to a legal destination, or select the source and destination with taps. The moving piece follows the pointer while its source and legal destinations remain marked. Releasing outside the board, a canceled touch or lost window focus, or a changed game position cancels the drag. Dragging a pawn onto its final rank opens the promotion choices. SAN and UCI entry remain available.
+The square board fills the available width above move entry and history. Dark Unicode pieces sit on cream and sage squares. Selection uses a gold background, and legal destinations have dark green borders. Controls around the board use native Android buttons and text fields.
+
+Drag one of your movable pieces to a legal destination, or select the source and destination with taps. After movement crosses Android's touch threshold, a translucent piece follows the finger and its source square fades. Releasing outside the board, a canceled touch or lost window focus, or a changed game position cancels the drag. Dragging a pawn onto its final rank reveals promotion buttons below the board. SAN and UCI entry remain available.
