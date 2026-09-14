@@ -4,6 +4,40 @@ public static class MoveRules
 {
     public static MoveResult Apply(Position position, MoveRequest request)
     {
+        if (ValidateKings(position) is { } invalid)
+        {
+            return invalid;
+        }
+
+        return ApplyValidated(position, request);
+    }
+
+    public static bool IsInCheck(Position position) => IsInCheck(position, position.SideToMove);
+
+    public static bool IsInCheck(Position position, Side side)
+    {
+        RequireKings(position);
+        return KingIsAttacked(position.Board, IsWhite(side));
+    }
+
+    public static IEnumerable<MoveRequest> GetLegalMoves(Position position)
+    {
+        RequireKings(position);
+        // Counters limit representable moves, not which moves are legal on the board.
+        var searchable = position with { HalfmoveClock = 0, FullmoveNumber = 1 };
+        foreach (var request in Candidates(searchable))
+        {
+            if (ApplyValidated(searchable, request) is Position)
+            {
+                yield return request;
+            }
+        }
+    }
+
+    public static bool HasLegalMove(Position position) => GetLegalMoves(position).Any();
+
+    internal static InvalidPosition? ValidateKings(Position position)
+    {
         var whiteKings = 0;
         var blackKings = 0;
         foreach (var square in BoardGeometry.All())
@@ -26,7 +60,18 @@ public static class MoveRules
             return new InvalidPosition { WhiteKingCount = whiteKings, BlackKingCount = blackKings };
         }
 
-        return request switch
+        return null;
+    }
+
+    private static void RequireKings(Position position)
+    {
+        if (ValidateKings(position) is { } invalid)
+        {
+            throw new ArgumentException($"Expected one king per side; found {invalid.WhiteKingCount} white and {invalid.BlackKingCount} black kings.", nameof(position));
+        }
+    }
+
+    private static MoveResult ApplyValidated(Position position, MoveRequest request) => request switch
         {
             MovePiece move => ApplyPieceMove(position, move.From, move.To, null),
             Promote promote => ApplyPieceMove(position, promote.From, promote.To, promote.Piece switch
@@ -38,6 +83,51 @@ public static class MoveRules
             }),
             Castle castle => ApplyCastling(position, castle.Wing)
         };
+
+    private static IEnumerable<MoveRequest> Candidates(Position position)
+    {
+        var white = IsWhite(position.SideToMove);
+        foreach (var from in BoardGeometry.All())
+        {
+            if (position.Board[from] is not Occupied source || IsWhite(source.Piece.Side) != white)
+            {
+                continue;
+            }
+
+            foreach (var to in BoardGeometry.All())
+            {
+                var dx = BoardGeometry.File(to) - BoardGeometry.File(from);
+                var dy = BoardGeometry.Rank(to) - BoardGeometry.Rank(from);
+                var possible = source.Piece.Piece switch
+                {
+                    Pawn => Math.Abs(dx) <= 1 && (dy == (white ? 1 : -1) || dx == 0 && dy == (white ? 2 : -2)),
+                    Knight => Math.Abs(dx) * Math.Abs(dy) == 2,
+                    Bishop => Math.Abs(dx) == Math.Abs(dy),
+                    Rook => dx == 0 || dy == 0,
+                    Queen => dx == 0 || dy == 0 || Math.Abs(dx) == Math.Abs(dy),
+                    King => Math.Max(Math.Abs(dx), Math.Abs(dy)) == 1
+                };
+                if (!possible || from == to)
+                {
+                    continue;
+                }
+
+                if (source.Piece.Piece is Pawn && BoardGeometry.Rank(to) == (white ? 7 : 0))
+                {
+                    yield return new Promote { From = from, To = to, Piece = PromotionPiece.Queen };
+                    yield return new Promote { From = from, To = to, Piece = PromotionPiece.Rook };
+                    yield return new Promote { From = from, To = to, Piece = PromotionPiece.Bishop };
+                    yield return new Promote { From = from, To = to, Piece = PromotionPiece.Knight };
+                }
+                else
+                {
+                    yield return new MovePiece { From = from, To = to };
+                }
+            }
+        }
+
+        yield return new Castle { Wing = CastlingWing.KingSide };
+        yield return new Castle { Wing = CastlingWing.QueenSide };
     }
 
     private static MoveResult ApplyPieceMove(Position position, Coordinate from, Coordinate to, Piece? promotion)
@@ -208,13 +298,9 @@ public static class MoveRules
         OwnedPiece? captured, Coordinate capturedSquare, EnPassantState enPassant)
     {
         var white = IsWhite(moving.Side);
-        foreach (var square in BoardGeometry.All())
+        if (KingIsAttacked(board, white))
         {
-            if (board[square] is Occupied occupied && occupied.Piece.Piece is King
-                && IsWhite(occupied.Piece.Side) == white && IsAttacked(board, square, !white))
-            {
-                return MoveResult.KingWouldBeInCheck;
-            }
+            return MoveResult.KingWouldBeInCheck;
         }
 
         var resetClock = moving.Piece is Pawn || captured is not null;
@@ -298,6 +384,20 @@ public static class MoveRules
             },
             _ => rights
         };
+    }
+
+    private static bool KingIsAttacked(Board board, bool white)
+    {
+        foreach (var square in BoardGeometry.All())
+        {
+            if (board[square] is Occupied occupied && occupied.Piece.Piece is King
+                && IsWhite(occupied.Piece.Side) == white)
+            {
+                return IsAttacked(board, square, !white);
+            }
+        }
+
+        return false;
     }
 
     private static bool IsAttacked(Board board, Coordinate target, bool byWhite)

@@ -45,6 +45,45 @@ internal static class MoveFixtures
         };
     }
 
+    internal static Position FromFen(string fen)
+    {
+        var fields = fen.Split(' ');
+        var pieces = new List<(string Square, char Piece)>();
+        var ranks = fields[0].Split('/');
+        for (var rank = 0; rank < 8; rank++)
+        {
+            var file = 0;
+            foreach (var symbol in ranks[rank])
+            {
+                if (char.IsDigit(symbol))
+                {
+                    file += symbol - '0';
+                }
+                else
+                {
+                    pieces.Add(($"{(char)('a' + file++)}{8 - rank}", symbol));
+                }
+            }
+        }
+        return Setup(pieces.ToArray()) with
+        {
+            SideToMove = fields[1] == "w" ? Side.White : Side.Black,
+            WhiteCastlingRights = Rights('K', 'Q'),
+            BlackCastlingRights = Rights('k', 'q'),
+            EnPassant = fields[3] == "-" ? EnPassantState.None : new EnPassantTarget { Square = Square(fields[3]) },
+            HalfmoveClock = int.Parse(fields[4]),
+            FullmoveNumber = int.Parse(fields[5])
+        };
+
+        CastlingRights Rights(char kingSide, char queenSide) => (fields[2].Contains(kingSide), fields[2].Contains(queenSide)) switch
+        {
+            (true, true) => CastlingRights.Both,
+            (true, false) => CastlingRights.KingSide,
+            (false, true) => CastlingRights.QueenSide,
+            (false, false) => CastlingRights.None
+        };
+    }
+
     internal static char At(Position position, string square) => position.Board[Square(square)] switch
     {
         Empty => '.',
