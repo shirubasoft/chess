@@ -22,7 +22,8 @@ function Save-NativeFailureDiagnostics([string]$ArtifactPath, [string]$AppHost, 
         @{ Name = 'aspire-state'; Arguments = @('describe', '--format', 'Json') }
     )) {
         try {
-            $info = [Diagnostics.ProcessStartInfo]::new('aspire')
+            $aspirePath = (Get-Command aspire -CommandType Application -ErrorAction Stop).Source
+            $info = [Diagnostics.ProcessStartInfo]::new($aspirePath)
             $info.UseShellExecute = $false
             $info.RedirectStandardOutput = $true
             $info.RedirectStandardError = $true
@@ -33,9 +34,9 @@ function Save-NativeFailureDiagnostics([string]$ArtifactPath, [string]$AppHost, 
             if (-not $process.WaitForExit(15000)) { $process.Kill($true); $process.WaitForExit() }
             $text = $output.GetAwaiter().GetResult() + $errorOutput.GetAwaiter().GetResult()
             if ($query.Name -eq 'aspire-state' -and $process.ExitCode -eq 0) {
-                # Whitelist state fields; resource environments contain generated credentials.
+                # Preserve resource state while excluding environments and properties containing credentials.
                 $state = $text | ConvertFrom-Json
-                $text = $state.resources | Select-Object name, displayName, state, healthStatus, healthReports | ConvertTo-Json -Depth 10
+                $text = $state.resources | Select-Object * -ExcludeProperty environment, properties | ConvertTo-Json -Depth 10
             }
             Write-NativeDiagnostic (Join-Path $ArtifactPath "$($query.Name).log") $text
         }
@@ -46,7 +47,7 @@ function Save-NativeFailureDiagnostics([string]$ArtifactPath, [string]$AppHost, 
         Get-ChildItem $logDirectory -Filter '*.log' | Where-Object LastWriteTimeUtc -GE $Since.UtcDateTime |
             Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 10 | ForEach-Object {
                 try {
-                    $text = (Get-Content $_.FullName -Tail 1500) -join "`n"
+                    $text = ((Get-Content $_.FullName -TotalCount 5000) + "`n--- Last 1500 log lines ---`n" + (Get-Content $_.FullName -Tail 1500)) -join "`n"
                     Write-NativeDiagnostic (Join-Path $ArtifactPath "aspire-$($_.Name)") $text
                 }
                 catch { Write-Warning "Could not retain Aspire log $($_.Name)." }
