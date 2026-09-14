@@ -49,6 +49,8 @@ public sealed partial class ChessWindow
             timestamp = DateTimeOffset.UtcNow, gesture = verificationGesture, name,
             requestedX = requested?.X, requestedY = requested?.Y, cursorX = cursor.X, cursorY = cursor.Y,
             foreground = GetForegroundWindow() == handle, windowAtCursor = WindowFromPoint(cursor) == handle,
+            windowAtRequested = requested is { } target
+                ? WindowFromPoint(new CursorPoint { X = (int)target.X, Y = (int)target.Y }) == handle : (bool?)null,
             windowLeft = Left, windowTop = Top, windowWidth = ActualWidth, windowHeight = ActualHeight,
             workArea = SystemParameters.WorkArea.ToString(), boardX = origin.X, boardY = origin.Y,
             screenX = SystemParameters.VirtualScreenLeft, screenY = SystemParameters.VirtualScreenTop,
@@ -62,6 +64,24 @@ public sealed partial class ChessWindow
             selected = session.SelectedSquare, dragSource = boardDrag?.Source, dragging,
             dragCurrent = boardDrag is { } drag && session.IsCurrentDrag(drag)
         }));
+    }
+
+    private void VerifyInitialBoardVisibility()
+    {
+        // Window geometry and WorkArea both use WPF units. Allow native pixel rounding.
+        var frame = new Rect(Left, Top, ActualWidth, ActualHeight);
+        frame.Inflate(-1, -1);
+        if (!SystemParameters.WorkArea.Contains(frame))
+            throw new InvalidOperationException("The initial chess window extends beyond the desktop work area. See the input log.");
+        var handle = new WindowInteropHelper(this).Handle;
+        foreach (var point in new[] { new Point(1, 1), new Point(board.ActualWidth - 1, board.ActualHeight - 1) })
+        {
+            // PointToScreen and WindowFromPoint both use native screen coordinates.
+            var screen = board.PointToScreen(point);
+            TraceVerificationInput("initial-board-corner", requested: screen);
+            if (WindowFromPoint(new CursorPoint { X = (int)screen.X, Y = (int)screen.Y }) != handle)
+                throw new InvalidOperationException("The initial chess board is obscured on the desktop. See the input log.");
+        }
     }
 
     private static string? InputName(IInputElement? input) => input is DependencyObject target

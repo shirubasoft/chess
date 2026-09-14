@@ -9,6 +9,7 @@ public sealed partial class ChessWindow
     {
         verificationGesture++;
         Activate();
+        if (verificationGesture == 1) VerifyInitialBoardVisibility();
         var from = squares[source].PointToScreen(new Point(squares[source].ActualWidth / 2, squares[source].ActualHeight / 2));
         var to = destination is { } name ? squares[name].PointToScreen(new Point(squares[name].ActualWidth / 2, squares[name].ActualHeight / 2))
             : board.PointToScreen(new Point(board.ActualWidth + 40, board.ActualHeight / 2));
