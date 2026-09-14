@@ -1,6 +1,11 @@
 namespace Chess;
 
-public union MatchCommand(PlayMove, ClaimDraw);
+public union MatchCommand(PlayMove, ClaimDraw, Resign);
+
+public sealed record Resign
+{
+    public required Side Player { get; init; }
+}
 
 public sealed record PlayMove
 {

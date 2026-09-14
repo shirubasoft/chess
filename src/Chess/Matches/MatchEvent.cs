@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Chess;
 
-public union MatchEvent(MovePlayed, DrawClaimed);
+public union MatchEvent(MovePlayed, DrawClaimed, PlayerResigned);
 
 public union MatchProgress(PlayContinues, MatchWon, MatchDrawn)
 {
@@ -54,4 +54,24 @@ public sealed class DrawClaimed
     public DrawClaimReason Reason { get; }
 
     public DrawClaimTiming Timing { get; }
+}
+
+public sealed class PlayerResigned
+{
+    [JsonConstructor]
+    internal PlayerResigned(int ply, PositionKey previousKey, Side player, MatchResult result)
+    {
+        Ply = ply;
+        PreviousKey = previousKey;
+        Player = player;
+        Result = result;
+    }
+
+    public int Ply { get; }
+
+    public PositionKey PreviousKey { get; }
+
+    public Side Player { get; }
+
+    public MatchResult Result { get; }
 }

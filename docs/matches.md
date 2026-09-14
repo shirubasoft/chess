@@ -10,8 +10,9 @@ with winner and reason, or `MatchDrawn` with a draw reason.
 
 `Match.Decide(state, command)` is a pure decision. `PlayMove` validates the named
 player and individual move request. `ClaimDraw` checks a threefold or fifty-move
-claim for the current position or a declared intended move. Accepted commands
-return `CommandAccepted` containing a `MatchEvent`. Rejections have distinct
+claim for the current position or a declared intended move. `Resign` is available
+to either player on either turn. Accepted commands return `CommandAccepted`
+containing a `MatchEvent`. Rejections have distinct
 cases, including wrong player, unavailable claim, the existing move rejection
 types, and an already finished match. Rejections leave the state and history
 unchanged.
@@ -55,8 +56,15 @@ immediately; an ongoing position permits continued play. Threefold repetition an
 automatically. Checkmate takes precedence over the 150-halfmove rule, as specified
 by [FIDE Article 9.6.2](https://handbook.fide.com/chapter/e012023).
 
-This model handles board play and draw claims. Applications implementing clocks,
-arbiter penalties, resignation, or draw offers need commands and events for those
-procedures. In particular, a rejected intended-move claim leaves the domain state
+`Resign` records a `PlayerResigned` event with the actor and adjudicated result.
+It normally awards the opponent a win with reason `Resignation`. In the
+[known cases of insufficient mating material](position-outcomes.md), it produces
+`ResignationWithoutMatingMaterial` as a draw, following
+[FIDE Article 5.1.2](https://handbook.fide.com/chapter/E012023). Applying or replaying
+the event finishes the match without adding a position or changing counters.
+
+Applications implementing clocks, arbiter penalties, or draw offers need commands
+and events for those procedures. In particular, a rejected intended-move claim
+leaves the domain state
 unchanged; over-the-board penalties and the obligation to play the declared move
 are procedures for the application to enforce.

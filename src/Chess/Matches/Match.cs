@@ -27,7 +27,8 @@ public static class Match
         return @event switch
         {
             MovePlayed played => ApplyMove(history, played),
-            DrawClaimed claimed => ApplyClaim(history, claimed)
+            DrawClaimed claimed => ApplyClaim(history, claimed),
+            PlayerResigned resigned => ApplyResignation(history, resigned)
         };
     }
 
@@ -43,8 +44,8 @@ public static class Match
 
     private static MatchCommandResult Decide(PositionHistory history, MatchCommand command)
     {
-        var player = command switch { PlayMove play => play.Player, ClaimDraw claim => claim.Player };
-        if (!player.Equals(history.Current.SideToMove))
+        var player = command switch { PlayMove play => play.Player, ClaimDraw claim => claim.Player, Resign resign => resign.Player };
+        if (command is not Resign && !player.Equals(history.Current.SideToMove))
         {
             return new WrongPlayer { Expected = history.Current.SideToMove, Actual = player };
         }
@@ -52,8 +53,18 @@ public static class Match
         {
             PlayMove play => ResolveMove(MoveRules.Apply(history.Current, play.Move), next =>
                 new CommandAccepted(new MovePlayed(history.Keys.Count, history.CurrentKey, play.Move, Adjudicate(history.Record(next))))),
-            ClaimDraw claim => DecideClaim(history, claim)
+            ClaimDraw claim => DecideClaim(history, claim),
+            Resign resign => DecideResignation(history, resign)
         };
+    }
+
+    private static MatchCommandResult DecideResignation(PositionHistory history, Resign resign)
+    {
+        Side opponent = resign.Player switch { White => Side.Black, Black => Side.White };
+        MatchResult result = MatingMaterial.IsKnownInsufficient(history.Current.Board, opponent)
+            ? new MatchDrawn { Reason = DrawReason.ResignationWithoutMatingMaterial }
+            : new MatchWon { Winner = opponent, Reason = WinReason.Resignation };
+        return new CommandAccepted(new PlayerResigned(history.Keys.Count - 1, history.CurrentKey, resign.Player, result));
     }
 
     private static MatchCommandResult DecideClaim(PositionHistory history, ClaimDraw claim) => claim.Timing switch
@@ -129,6 +140,12 @@ public static class Match
             _ => throw new InvalidOperationException("Unknown recorded draw claim.")
         };
         return new FinishedMatch(history, new MatchDrawn { Reason = reason });
+    }
+
+    private static MatchState ApplyResignation(PositionHistory history, PlayerResigned resigned)
+    {
+        RequirePredecessor(history, resigned.Ply, resigned.PreviousKey);
+        return new FinishedMatch(history, resigned.Result);
     }
 
     private static void RequirePredecessor(PositionHistory history, int ply, PositionKey key)
