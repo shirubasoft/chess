@@ -85,8 +85,7 @@ public static class Match
             Stalemate => new MatchDrawn { Reason = DrawReason.Stalemate },
             DeadPosition => new MatchDrawn { Reason = DrawReason.DeadPosition },
             MatingContinuationExists => HistoryOutcome(history),
-            UndeterminedPosition => HistoryOutcome(history),
-            InvalidPosition => throw new ArgumentException("Match positions require one king per side.", nameof(history))
+            UndeterminedPosition => HistoryOutcome(history)
         };
     }
 
@@ -144,7 +143,6 @@ public static class Match
     private static MatchCommandResult ResolveMove(MoveResult result, Func<Position, MatchCommandResult> accepted) => result switch
     {
         Position next => accepted(next),
-        InvalidPosition rejection => rejection,
         SourceSquareEmpty rejection => rejection,
         WrongSideToMove rejection => rejection,
         FriendlyPieceOnDestination rejection => rejection,

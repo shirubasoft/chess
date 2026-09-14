@@ -32,14 +32,7 @@ public sealed record PositionKey
 
     public EnPassantState EnPassant { get; }
 
-    public static PositionKey Create(Position position)
-    {
-        if (MoveRules.ValidateKings(position) is not null)
-        {
-            throw new ArgumentException("Repetition identity requires one king per side.", nameof(position));
-        }
-        return new PositionKey(position);
-    }
+    public static PositionKey Create(Position position) => new(position);
 
     private static EnPassantState LegalEnPassant(Position position)
     {

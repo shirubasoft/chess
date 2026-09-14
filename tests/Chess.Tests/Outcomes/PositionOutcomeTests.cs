@@ -70,14 +70,6 @@ public sealed class PositionOutcomeTests
     }
 
     [Test]
-    public async Task InvalidBoardsAreNotReportedAsStalemateOrDead()
-    {
-        var invalid = await Assert.That(PositionRules.GetOutcome(Setup()).Value).IsTypeOf<InvalidPosition>().And.IsNotNull();
-        await Assert.That(invalid.WhiteKingCount).IsEqualTo(0);
-        await Assert.That(invalid.BlackKingCount).IsEqualTo(0);
-    }
-
-    [Test]
     public async Task SearchIgnoresCountersAndHonorsCancellation()
     {
         var position = Setup(("c6", 'K'), ("a7", 'P'), ("a8", 'k')) with

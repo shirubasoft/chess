@@ -2,32 +2,17 @@ namespace Chess;
 
 public static class MoveRules
 {
-    public static MoveResult Apply(Position position, MoveRequest request)
-    {
-        if (ValidateKings(position) is { } invalid)
-        {
-            return invalid;
-        }
-
-        return ApplyValidated(position, request);
-    }
-
     public static bool IsInCheck(Position position) => IsInCheck(position, position.SideToMove);
 
-    public static bool IsInCheck(Position position, Side side)
-    {
-        RequireKings(position);
-        return KingIsAttacked(position.Board, IsWhite(side));
-    }
+    public static bool IsInCheck(Position position, Side side) => KingIsAttacked(position.Board, IsWhite(side));
 
     public static IEnumerable<MoveRequest> GetLegalMoves(Position position)
     {
-        RequireKings(position);
         // Counters limit representable moves, not which moves are legal on the board.
         var searchable = position with { HalfmoveClock = 0, FullmoveNumber = 1 };
         foreach (var request in Candidates(searchable))
         {
-            if (ApplyValidated(searchable, request) is Position)
+            if (Apply(searchable, request) is Position)
             {
                 yield return request;
             }
@@ -36,53 +21,18 @@ public static class MoveRules
 
     public static bool HasLegalMove(Position position) => GetLegalMoves(position).Any();
 
-    internal static InvalidPosition? ValidateKings(Position position)
+    public static MoveResult Apply(Position position, MoveRequest request) => request switch
     {
-        var whiteKings = 0;
-        var blackKings = 0;
-        foreach (var square in BoardGeometry.All())
+        MovePiece move => ApplyPieceMove(position, move.From, move.To, null),
+        Promote promote => ApplyPieceMove(position, promote.From, promote.To, promote.Piece switch
         {
-            if (position.Board[square] is Occupied occupied && occupied.Piece.Piece is King)
-            {
-                if (IsWhite(occupied.Piece.Side))
-                {
-                    whiteKings++;
-                }
-                else
-                {
-                    blackKings++;
-                }
-            }
-        }
-
-        if (whiteKings != 1 || blackKings != 1)
-        {
-            return new InvalidPosition { WhiteKingCount = whiteKings, BlackKingCount = blackKings };
-        }
-
-        return null;
-    }
-
-    private static void RequireKings(Position position)
-    {
-        if (ValidateKings(position) is { } invalid)
-        {
-            throw new ArgumentException($"Expected one king per side; found {invalid.WhiteKingCount} white and {invalid.BlackKingCount} black kings.", nameof(position));
-        }
-    }
-
-    private static MoveResult ApplyValidated(Position position, MoveRequest request) => request switch
-        {
-            MovePiece move => ApplyPieceMove(position, move.From, move.To, null),
-            Promote promote => ApplyPieceMove(position, promote.From, promote.To, promote.Piece switch
-            {
-                Queen queen => (Piece)queen,
-                Rook rook => rook,
-                Bishop bishop => bishop,
-                Knight knight => knight
-            }),
-            Castle castle => ApplyCastling(position, castle.Wing)
-        };
+            Queen queen => (Piece)queen,
+            Rook rook => rook,
+            Bishop bishop => bishop,
+            Knight knight => knight
+        }),
+        Castle castle => ApplyCastling(position, castle.Wing)
+    };
 
     private static IEnumerable<MoveRequest> Candidates(Position position)
     {

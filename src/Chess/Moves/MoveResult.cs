@@ -2,7 +2,6 @@ namespace Chess;
 
 public union MoveResult(
     Position,
-    InvalidPosition,
     SourceSquareEmpty,
     WrongSideToMove,
     FriendlyPieceOnDestination,
@@ -36,13 +35,6 @@ public union MoveResult(
     public static CastlingUnavailable CastlingUnavailable { get; } = new();
 
     public static MoveCounterOverflow MoveCounterOverflow { get; } = new();
-}
-
-public sealed record InvalidPosition
-{
-    public required int WhiteKingCount { get; init; }
-
-    public required int BlackKingCount { get; init; }
 }
 
 public sealed class SourceSquareEmpty

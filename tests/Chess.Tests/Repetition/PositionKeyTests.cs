@@ -77,11 +77,4 @@ public sealed class PositionKeyTests
         var position = FromFen("k3r3/8/8/2PpP3/8/8/8/4K3 w - d6 0 1");
         await Assert.That(PositionKey.Create(position).EnPassant.Value).IsTypeOf<EnPassantTarget>();
     }
-
-    [Test]
-    public async Task InvalidKingCountsCannotEnterHistory()
-    {
-        await Assert.That(() => PositionKey.Create(Setup())).Throws<ArgumentException>();
-        await Assert.That(() => PositionHistory.Start(Setup())).Throws<ArgumentException>();
-    }
 }

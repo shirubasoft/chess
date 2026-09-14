@@ -6,11 +6,6 @@ public static class PositionRules
         Position position, DeadPositionSearch? search = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (MoveRules.ValidateKings(position) is { } invalid)
-        {
-            return invalid;
-        }
-
         if (!MoveRules.HasLegalMove(position))
         {
             return MoveRules.IsInCheck(position)

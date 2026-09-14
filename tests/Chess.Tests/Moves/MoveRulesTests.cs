@@ -5,34 +5,6 @@ namespace Chess.Tests;
 public sealed class MoveRulesTests
 {
     [Test]
-    [Arguments(0, 0)]
-    [Arguments(1, 0)]
-    [Arguments(0, 1)]
-    [Arguments(2, 1)]
-    [Arguments(1, 2)]
-    [Arguments(2, 2)]
-    public async Task MissingOrDuplicateKingsAreRejectedBeforeAnyRequest(int whiteKings, int blackKings)
-    {
-        var pieces = new List<(string, char)>();
-        for (var index = 0; index < whiteKings; index++) pieces.Add((index == 0 ? "a1" : "b1", 'K'));
-        for (var index = 0; index < blackKings; index++) pieces.Add((index == 0 ? "h8" : "g8", 'k'));
-        var position = Setup(pieces.ToArray());
-        MoveRequest[] requests =
-        [
-            Move("a2", "a3"),
-            new Castle { Wing = CastlingWing.KingSide },
-            new Promote { From = Square("e7"), To = Square("e8"), Piece = PromotionPiece.Queen }
-        ];
-
-        foreach (var request in requests)
-        {
-            var failure = await Result<InvalidPosition>(MoveRules.Apply(position, request));
-            await Assert.That(failure.WhiteKingCount).IsEqualTo(whiteKings);
-            await Assert.That(failure.BlackKingCount).IsEqualTo(blackKings);
-        }
-    }
-
-    [Test]
     public async Task EmptySourceWrongSideFriendlyDestinationAndStationaryMovesAreRejected()
     {
         var position = Setup(("a1", 'K'), ("h8", 'k'), ("b2", 'P'), ("b3", 'N'), ("g7", 'p'));
