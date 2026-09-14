@@ -31,6 +31,9 @@ jobs:
         with:
           global-json-file: global.json
           dotnet-version: '10.0.x'
+      - name: Validate diagnostic redaction
+        shell: pwsh
+        run: ./scripts/native/test-diagnostics.ps1
       - name: Install pinned Aspire CLI
         run: dotnet tool install --global Aspire.Cli --version 13.5.3
       - name: Install GTK and isolated display dependencies
