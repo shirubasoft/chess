@@ -21,12 +21,7 @@ export function attach(board, receiver) {
             square.classList.remove('drag-source', 'drag-target', 'drag-over'));
         if (board.hasPointerCapture(previous.pointerId)) board.releasePointerCapture(previous.pointerId);
         if (previous.started && notify) {
-            // Finish touchend before rendering the promotion chooser; inserting it
-            // during pointerup can make Chromium suppress the next tap's click.
-            setTimeout(() => {
-                if (!events.signal.aborted)
-                    receiver.invokeMethodAsync('DropBoardPiece', previous.source.dataset.square, to, previous.context);
-            }, 0);
+            receiver.invokeMethodAsync('DropBoardPiece', previous.source.dataset.square, to, previous.context);
         }
     }
 
@@ -68,6 +63,12 @@ export function attach(board, receiver) {
         board.querySelector('.drag-over')?.classList.remove('drag-over');
         const target = squareAt(event.clientX, event.clientY);
         if (target?.classList.contains('drag-target')) target.classList.add('drag-over');
+    }, { ...options, passive: false });
+
+    board.addEventListener('touchmove', event => {
+        // A chess drag must not start a native fling that consumes the next tap.
+        // Pointer movement alone cannot cancel the browser's touch gesture.
+        if (gesture?.started && event.touches.length === 1 && event.cancelable) event.preventDefault();
     }, { ...options, passive: false });
 
     window.addEventListener('pointerup', event => {

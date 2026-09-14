@@ -52,7 +52,9 @@ public sealed partial class BrowserCrossplayTests
     }
 
     [Test]
-    public async Task TouchDropWaitsForThePromotionChoice()
+    [Arguments(2)]
+    [Arguments(12)]
+    public async Task TouchDropWaitsForThePromotionChoice(int steps)
     {
         var settings = Settings();
         using var http = new HttpClient { BaseAddress = new Uri(settings.ServerUrl) };
@@ -64,15 +66,27 @@ public sealed partial class BrowserCrossplayTests
         var page = await browser.NewPageAsync(new() { ViewportSize = new() { Width = 390, Height = 844 }, IsMobile = true, HasTouch = true });
         await JoinBoardAsync(page, settings.WebUrl, white);
         var before = await reference.GetAsync(white);
-        await TouchDragAsync(page, "a7", "a8");
-        await Expect(page.GetByTestId("promotion")).ToBeVisibleAsync();
-        await Assert.That((await reference.GetAsync(white)).Revision).IsEqualTo(before.Revision);
-        await page.GetByTestId("promote-n").TapAsync();
-        await Expect(page.GetByTestId("promotion")).ToHaveCountAsync(0);
-        await WaitForMoveAsync(reference, white, "a7a8n");
-        await Expect(page.GetByTestId("square-a8")).ToHaveAttributeAsync("data-piece", "knight");
-        Directory.CreateDirectory(settings.ScreenshotDirectory);
-        await page.ScreenshotAsync(new() { Path = Path.Combine(settings.ScreenshotDirectory, "web-touch-promotion.png"), FullPage = true });
+        var artifact = Path.Combine(settings.ScreenshotDirectory, $"web-touch-promotion-{steps}");
+        await using var input = await BrowserInputTrace.StartAsync(browser, artifact);
+        try
+        {
+            await TouchDragAsync(page, "a7", "a8", steps: steps);
+            await Expect(page.GetByTestId("promotion")).ToBeVisibleAsync();
+            await Assert.That((await reference.GetAsync(white)).Revision).IsEqualTo(before.Revision);
+            await page.GetByTestId("promote-n").TapAsync();
+            await Expect(page.GetByTestId("promotion")).ToHaveCountAsync(0);
+            await WaitForMoveAsync(reference, white, "a7a8n");
+            await Expect(page.GetByTestId("square-a8")).ToHaveAttributeAsync("data-piece", "knight");
+        }
+        finally
+        {
+            Directory.CreateDirectory(settings.ScreenshotDirectory);
+            await page.ScreenshotAsync(new() { Path = artifact + ".png", FullPage = true });
+            await input.SaveAsync();
+        }
+        await Assert.That(input.Contains("InputHandlerProxy::HandleTouchStart")).IsTrue();
+        // Native flinging can consume the chooser's first tap even though CSS prevents scrolling.
+        await Assert.That(input.Contains("FlingController::HandlingGestureFling")).IsFalse();
     }
 
     [Test]
@@ -248,7 +262,7 @@ public sealed partial class BrowserCrossplayTests
         await page.Mouse.UpAsync();
     }
 
-    private static async Task TouchDragAsync(IPage page, string from, string to, string? screenshot = null, bool paced = false, bool cancel = false)
+    private static async Task TouchDragAsync(IPage page, string from, string to, string? screenshot = null, bool paced = false, bool cancel = false, int steps = 12)
     {
         await PrepareBoardInputAsync(page);
         var start = await SquareCenterAsync(page, from);
@@ -257,11 +271,11 @@ public sealed partial class BrowserCrossplayTests
         try
         {
             await cdp.SendAsync("Input.dispatchTouchEvent", new() { ["type"] = "touchStart", ["touchPoints"] = new[] { new { x = start.X, y = start.Y, id = 1 } } });
-            for (var step = 1; step <= 12; step++)
+            for (var step = 1; step <= steps; step++)
             {
                 await cdp.SendAsync("Input.dispatchTouchEvent", new() { ["type"] = "touchMove", ["touchPoints"] = new[] { new
                 {
-                    x = start.X + (end.X - start.X) * step / 12, y = start.Y + (end.Y - start.Y) * step / 12, id = 1
+                    x = start.X + (end.X - start.X) * step / steps, y = start.Y + (end.Y - start.Y) * step / steps, id = 1
                 } } });
                 if (paced) await Task.Delay(50);
             }
