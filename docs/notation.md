@@ -41,7 +41,8 @@ must describe the actual result. Ambiguous moves have a distinct error kind.
 
 `Pgn.Parse(text)` reads one game. `Pgn.ReadGames(text)` lazily yields game results
 from a string and stops after the first error. Errors identify the offending
-token's character offset. A parsed game contains tags, the initial position,
+token's character offset. Completed games are yielded before errors in the
+following text. A parsed game contains tags, the initial position,
 the recorded result, and an immutable move tree with comments, numeric
 annotations, and recursive variations. Every variation starts before the move
 it replaces and undergoes the same legality checks as the mainline. Nesting is

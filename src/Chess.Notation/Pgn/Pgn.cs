@@ -35,6 +35,7 @@ public static class Pgn
     {
         private readonly Lexer _lexer = new(text);
         private Token _current;
+        private NotationError? _nextGameError;
 
         internal IEnumerable<NotationResult<PgnGame>> ReadGames()
         {
@@ -49,6 +50,7 @@ public static class Pgn
                         Advance();
                         started = true;
                     }
+                    if (_nextGameError is { } error) throw new NotationException(error);
                     if (_current.Kind == TokenKind.End) yield break;
                     result = new Parsed<PgnGame> { Value = ReadGame() };
                 }
@@ -136,12 +138,19 @@ public static class Pgn
                             "1/2-1/2" => PgnResult.Draw, "*" => PgnResult.Unfinished,
                             _ => throw new InvalidOperationException("Unexpected result token.")
                         };
-                        Advance();
-                        while (_current.Kind == TokenKind.Comment)
+                        try
                         {
-                            if (moves.Count == 0) comments.Add(_current.Text);
-                            else moves[^1] = moves[^1] with { Comments = moves[^1].Comments.Add(_current.Text) };
                             Advance();
+                            while (_current.Kind == TokenKind.Comment)
+                            {
+                                if (moves.Count == 0) comments.Add(_current.Text);
+                                else moves[^1] = moves[^1] with { Comments = moves[^1].Comments.Add(_current.Text) };
+                                Advance();
+                            }
+                        }
+                        catch (NotationException trailingError)
+                        {
+                            _nextGameError = trailingError.Error;
                         }
                         return new PgnLine { Comments = comments.ToImmutable(), Moves = moves.ToImmutable() };
                     case TokenKind.Symbol:

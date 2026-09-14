@@ -109,4 +109,17 @@ public sealed class PgnTests
             await Assert.That(game.Mainline.Moves[0].Comments[0]).IsEqualTo("After result");
         }
     }
+
+    [Test]
+    [Arguments("1. e4 * }")]
+    [Arguments("1. e4 * [Event \"unterminated")]
+    public async Task AFollowingLexicalErrorDoesNotDiscardACompletedGame(string text)
+    {
+        using var games = Pgn.ReadGames(text).GetEnumerator();
+        await Assert.That(games.MoveNext()).IsTrue();
+        await Assert.That(games.Current.Value).IsTypeOf<Parsed<PgnGame>>();
+        await Assert.That(games.MoveNext()).IsTrue();
+        await Assert.That(games.Current.Value).IsTypeOf<NotationError>();
+        await Assert.That(games.MoveNext()).IsFalse();
+    }
 }
