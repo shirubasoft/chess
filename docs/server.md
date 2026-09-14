@@ -13,8 +13,8 @@ volume and injects its connection string into the server. `Chess:Backend` select
 the command executor. The AppHost passes its `backend` parameter to this setting.
 For a separately hosted server, set `ConnectionStrings__chess` and `Chess__Backend`.
 
-Select Akka with `--Parameters:backend=Akka` after the Aspire command's `--`
-separator. Akka.Hosting manages the actor system, and cluster sharding routes each
+Select `Akka` or `Orleans` with `--Parameters:backend=Orleans` after the Aspire
+command's `--` separator. Akka is the default. Akka.Hosting manages the actor system, and cluster sharding routes each
 game UUID to one actor. `ReceiveAsync` suspends that actor's mailbox while its
 PostgreSQL transaction runs. Idle entities passivate and reactivate on demand.
 Durable game data remains in the common PostgreSQL format, so changing executors
@@ -27,6 +27,26 @@ ports for multiple nodes. Every node in the cluster must use the same shard coun
 The readiness endpoint requires the Akka member to reach `Up`. Remoting uses
 versioned game message serializers. An HTTP timeout can occur after a commit;
 retry the same request ID to recover the committed response.
+
+Orleans uses one UUID-keyed, non-reentrant grain per game. Grain turns call the
+same transactional store and idle activations are collected. Its generated
+grain protocol carries versioned request and reply envelopes. ADO.NET clustering
+uses PostgreSQL membership tables, initialized before the silo starts from the
+Orleans 10.3.1 scripts shipped in `Chess.Server.Orleans/Storage`. Membership setup
+runs once under a transaction and advisory lock, separately from game data.
+
+`Chess:Orleans` binds `ClusterId`, `ServiceId`, `AdvertisedAddress`, `SiloPort`,
+`RequestTimeoutSeconds`, and `IdleSeconds`. Aspire allocates the silo TCP port.
+The default advertised address is loopback; use a reachable IP and port for each
+node in a multi-host cluster. Nodes share the same cluster ID, service ID, and
+database. HTTP hosts call grains through their in-process clients, so an external
+Orleans gateway is disabled. Readiness requires an active silo. Choose the same
+backend on all servers in a deployment. To switch under Aspire, stop `server`
+with `aspire resource server stop` before stopping the AppHost, then restart
+with the other backend. This lets the silo leave PostgreSQL membership before
+the orchestrator exits. Game codes, history, and retry receipts remain valid.
+The AppHost's `orleans-cluster-id` parameter defaults to `chess`; tests use their
+own cluster ID so failed earlier test runs cannot delay cluster membership.
 
 The server hosts untimed standard chess. Match decisions use the core's
 [documented adjudication scope](position-outcomes.md). `Chess.Notation` parses
@@ -126,11 +146,15 @@ retries, so database access and backups must protect those credentials too.
 Run the real PostgreSQL/HTTP/SSE/WebSocket suite with:
 
 ```sh
-bash scripts/test-server.sh Postgres
 bash scripts/test-server.sh Akka
+bash scripts/test-server.sh Orleans
+bash scripts/test-backend-switch.sh
 ```
 
 The script starts an isolated Aspire application and stops it after the tests.
+The switch check plays the same game across Akka, Orleans, Akka, and Orleans again. It
+verifies both side codes, snapshots, further moves, and retries of commands
+committed by the previous backend.
 To test an already running application, set `CHESS_TEST_SERVER` and run
 `dotnet test --project tests/Chess.Server.Tests/Chess.Server.Tests.csproj`.
 The shared C# `Chess.Client` project implements the API and reuses the core for
