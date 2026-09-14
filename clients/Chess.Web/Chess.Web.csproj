@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
+    <ProjectReference Include="../../src/Chess.Client/Chess.Client.csproj" />
+    <Compile Remove="Host/**" />
+    <Content Remove="Host/**" />
+    <None Remove="Host/**" />
+  </ItemGroup>
+</Project>

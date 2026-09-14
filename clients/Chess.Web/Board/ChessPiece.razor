@@ -1,0 +1,28 @@
+<svg class="piece @Color.ToString().ToLowerInvariant() @Kind" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+    @switch (Kind)
+    {
+        case "pawn":
+            <circle cx="24" cy="12" r="6" /><path d="M20 18h8l-1 9 6 8H15l6-8z" /><path d="M14 35h20l2 5H12z" />
+            break;
+        case "rook":
+            <path d="M13 8h5v5h4V8h4v5h4V8h5v11l-5 3 1 12H17l1-12-5-3z" /><path d="M15 34h18l3 6H12zM17 20h14" />
+            break;
+        case "knight":
+            <path d="M14 35c0-8 7-10 12-14l-8 2-6-4 7-10 11-3 1 6c8 6 8 16 3 23z" /><path d="M13 35h22l2 5H11z" /><circle cx="23" cy="14" r="1.5" class="eye" />
+            break;
+        case "bishop":
+            <path d="M24 6c-5 5-10 9-10 14 0 5 5 8 10 8s10-3 10-8c0-5-5-9-10-14zM24 12l-5 8" /><path d="M20 28h8l3 7H17zM14 35h20l3 5H11z" />
+            break;
+        case "queen":
+            <path d="m11 14 8 7 5-11 5 11 8-7-6 19H17z" /><circle cx="11" cy="12" r="2.5" /><circle cx="24" cy="8" r="2.5" /><circle cx="37" cy="12" r="2.5" /><path d="M16 33h16l4 7H12z" />
+            break;
+        case "king":
+            <path d="M24 5v10M20 9h8" /><path d="M24 16c-9-8-17 1-10 10l5 7h10l5-7c7-9-1-18-10-10zM24 16v14M17 33h14l5 7H12z" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public string Kind { get; set; } = "pawn";
+    [Parameter] public PlayerSide Color { get; set; }
+}
