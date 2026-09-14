@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Chess;
 
 public union MatchCommandResult(
@@ -23,6 +25,7 @@ public union MatchCommandResult(
 
 public sealed class CommandAccepted
 {
+    [JsonConstructor]
     internal CommandAccepted(MatchEvent @event) => Event = @event;
 
     public MatchEvent Event { get; }

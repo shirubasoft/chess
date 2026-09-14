@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Chess;
 
 public sealed record PositionKey
@@ -20,6 +22,17 @@ public sealed record PositionKey
         WhiteCastlingRights = position.WhiteCastlingRights;
         BlackCastlingRights = position.BlackCastlingRights;
         EnPassant = LegalEnPassant(position);
+    }
+
+    [JsonConstructor]
+    internal PositionKey(string piecePlacement, Side sideToMove, CastlingRights whiteCastlingRights,
+        CastlingRights blackCastlingRights, EnPassantState enPassant)
+    {
+        PiecePlacement = piecePlacement;
+        SideToMove = sideToMove;
+        WhiteCastlingRights = whiteCastlingRights;
+        BlackCastlingRights = blackCastlingRights;
+        EnPassant = enPassant;
     }
 
     public string PiecePlacement { get; }
