@@ -1,0 +1,112 @@
+name: Validate native chess clients
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-ui:
+    name: ${{ matrix.platform }} UI / ${{ matrix.backend }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [Akka, Orleans]
+        platform: [Linux, Windows, Android]
+        include:
+          - platform: Linux
+            runner: ubuntu-24.04
+          - platform: Windows
+            runner: windows-2025
+          - platform: Android
+            runner: ubuntu-24.04
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: '10.0.x'
+      - name: Install pinned Aspire CLI
+        run: dotnet tool install --global Aspire.Cli --version 13.5.3
+      - name: Install GTK and isolated display dependencies
+        if: matrix.platform == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-1 xvfb xauth imagemagick fonts-dejavu-core dbus-x11
+      - uses: actions/setup-java@v4
+        if: matrix.platform == 'Android'
+        with:
+          distribution: microsoft
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+        if: matrix.platform == 'Android'
+        with:
+          cmdline-tools-version: '14742923'
+          log-accepted-android-sdk-licenses: false
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0'
+      - name: Install SDK-pinned Android workload
+        if: matrix.platform == 'Android'
+        run: |
+          dotnet workload install android --skip-manifest-update
+          dotnet workload list
+      - name: Build desktop client before starting the server
+        if: matrix.platform != 'Android'
+        run: dotnet build clients/Chess.${{ matrix.platform }}/Chess.${{ matrix.platform }}.csproj --configuration Release
+      - name: Build emulator and ARM64 APKs before starting the server
+        if: matrix.platform == 'Android'
+        shell: bash
+        run: |
+          dotnet build clients/Chess.Android/Chess.Android.csproj --configuration Debug -r android-x64 -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT" -p:JavaSdkDirectory="$JAVA_HOME"
+          dotnet build clients/Chess.Android/Chess.Android.csproj --configuration Release -r android-arm64 -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT" -p:JavaSdkDirectory="$JAVA_HOME"
+      - name: Run GTK UI crossplay on an isolated display
+        if: matrix.platform == 'Linux'
+        env:
+          GDK_BACKEND: x11
+          GTK_A11Y: none
+        run: xvfb-run -a -s '-screen 0 1280x1024x24 -nolisten tcp' pwsh -NoProfile -File scripts/native/test-ui.ps1 -Platform Linux -Backend '${{ matrix.backend }}'
+      - name: Run WPF UI crossplay with native PostgreSQL
+        if: matrix.platform == 'Windows'
+        shell: pwsh
+        run: ./scripts/native/test-ui.ps1 -Platform Windows -Backend '${{ matrix.backend }}'
+      - name: Enable Android VM acceleration
+        if: matrix.platform == 'Android'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run Android UI crossplay on an emulator
+        if: matrix.platform == 'Android'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          avd-name: chess-native-verification
+          emulator-port: 5554
+          emulator-boot-timeout: 300
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: pwsh -NoProfile -File scripts/native/test-ui.ps1 -Platform Android -Backend '${{ matrix.backend }}' -Device emulator-5554
+      - name: Upload native verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}-${{ matrix.backend }}
+          if-no-files-found: error
+          path: |
+            artifacts/native/*-verification.json
+            artifacts/native/*-verification.png
+            artifacts/native/*.log
+      - name: Upload Android ARM64 Release APK
+        if: always() && matrix.platform == 'Android'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-arm64-release-${{ matrix.backend }}
+          if-no-files-found: error
+          path: clients/Chess.Android/bin/Release/net11.0-android37.0/android-arm64/*-Signed.apk

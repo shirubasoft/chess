@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Chess.Android/Chess.Android.csproj" />
+  <Project Path="Chess.Linux/Chess.Linux.csproj" />
+  <Project Path="Chess.Windows/Chess.Windows.csproj" />
+  <Project Path="../tests/Chess.Native.Tests/Chess.Native.Tests.csproj" />
+</Solution>

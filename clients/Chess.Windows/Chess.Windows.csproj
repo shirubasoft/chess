@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net11.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Chess.Client/Chess.Client.csproj" />
+    <Compile Include="../../tests/Chess.Native.Tests/NativeUiVerification.cs" Link="Verification/NativeUiVerification.cs" />
+  </ItemGroup>
+</Project>

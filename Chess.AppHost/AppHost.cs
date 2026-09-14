@@ -2,10 +2,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var backend = builder.AddParameter("backend");
 var orleansClusterId = builder.AddParameter("orleans-cluster-id");
-var database = builder.AddPostgres("postgres")
-    .WithDataVolume()
-    .WithLifetime(ContainerLifetime.Persistent)
-    .AddDatabase("chess");
+var database = builder.AddChessDatabase();
 
 builder.AddProject<Projects.Chess_Server>("server")
     .WithReference(database)
