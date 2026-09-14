@@ -66,6 +66,8 @@ jobs:
         run: |
           dotnet build clients/Chess.Android/Chess.Android.csproj --configuration Debug -r android-x64 -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT" -p:JavaSdkDirectory="$JAVA_HOME"
           dotnet build clients/Chess.Android/Chess.Android.csproj --configuration Release -r android-arm64 -p:AndroidSdkDirectory="$ANDROID_SDK_ROOT" -p:JavaSdkDirectory="$JAVA_HOME"
+      - name: Build AppHost before starting the server
+        run: dotnet build Chess.AppHost/Chess.AppHost.csproj --configuration Debug
       - name: Run GTK UI crossplay on an isolated display
         if: matrix.platform == 'Linux'
         env:
