@@ -2,8 +2,8 @@ namespace Chess;
 
 internal static class BoardGeometry
 {
-    private static readonly BoardFile[] Files = [new A(), new B(), new C(), new D(), new E(), new F(), new G(), new H()];
-    private static readonly BoardRank[] Ranks = [new One(), new Two(), new Three(), new Four(), new Five(), new Six(), new Seven(), new Eight()];
+    private static readonly BoardFile[] Files = [BoardFile.A, BoardFile.B, BoardFile.C, BoardFile.D, BoardFile.E, BoardFile.F, BoardFile.G, BoardFile.H];
+    private static readonly BoardRank[] Ranks = [BoardRank.One, BoardRank.Two, BoardRank.Three, BoardRank.Four, BoardRank.Five, BoardRank.Six, BoardRank.Seven, BoardRank.Eight];
 
     internal static Coordinate At(int file, int rank) => new() { File = Files[file], Rank = Ranks[rank] };
 

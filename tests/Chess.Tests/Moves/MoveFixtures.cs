@@ -6,17 +6,17 @@ internal static class MoveFixtures
 
     internal static MovePiece Move(string from, string to) => new() { From = Square(from), To = Square(to) };
 
-    internal static OwnedPiece Piece(char symbol) => new()
+    internal static OwnedPiece CreatePiece(char symbol) => new()
     {
-        Side = char.IsUpper(symbol) ? new White() : new Black(),
+        Side = char.IsUpper(symbol) ? Side.White : Side.Black,
         Piece = char.ToLowerInvariant(symbol) switch
         {
-            'p' => new Pawn(),
-            'n' => new Knight(),
-            'b' => new Bishop(),
-            'r' => new Rook(),
-            'q' => new Queen(),
-            'k' => new King(),
+            'p' => Piece.Pawn,
+            'n' => Piece.Knight,
+            'b' => Piece.Bishop,
+            'r' => Piece.Rook,
+            'q' => Piece.Queen,
+            'k' => Piece.King,
             _ => throw new ArgumentException("Unknown fixture piece.", nameof(symbol))
         }
     };
@@ -26,7 +26,7 @@ internal static class MoveFixtures
         var board = new Board();
         foreach (var (square, piece) in pieces)
         {
-            board = board.Place(Square(square), Piece(piece)) switch
+            board = board.Place(Square(square), CreatePiece(piece)) switch
             {
                 Board next => next,
                 PlacementConflict => throw new ArgumentException("Duplicate fixture square.", nameof(pieces))
@@ -36,10 +36,10 @@ internal static class MoveFixtures
         return new Position
         {
             Board = board,
-            SideToMove = new White(),
-            WhiteCastlingRights = new NoCastlingRights(),
-            BlackCastlingRights = new NoCastlingRights(),
-            EnPassant = new NoEnPassant(),
+            SideToMove = Side.White,
+            WhiteCastlingRights = CastlingRights.None,
+            BlackCastlingRights = CastlingRights.None,
+            EnPassant = EnPassantState.None,
             HalfmoveClock = 8,
             FullmoveNumber = 12
         };

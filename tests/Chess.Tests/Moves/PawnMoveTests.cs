@@ -11,7 +11,7 @@ public sealed class PawnMoveTests
     {
         var position = Setup(("a1", 'K'), ("h8", 'k'), (from, white ? 'P' : 'p')) with
         {
-            SideToMove = white ? new White() : new Black()
+            SideToMove = white ? Side.White : Side.Black
         };
 
         var next = await Result<Position>(MoveRules.Apply(position, Move(from, to)));
@@ -43,7 +43,7 @@ public sealed class PawnMoveTests
     {
         var position = Setup(("a1", 'K'), ("h8", 'k'), (from, white ? 'P' : 'p'), (to, white ? 'n' : 'N')) with
         {
-            SideToMove = white ? new White() : new Black()
+            SideToMove = white ? Side.White : Side.Black
         };
 
         var next = await Result<Position>(MoveRules.Apply(position, Move(from, to)));
@@ -60,7 +60,7 @@ public sealed class PawnMoveTests
     {
         var position = Setup(("a1", 'K'), ("h8", 'k'), (from, white ? 'P' : 'p'), (captured, white ? 'p' : 'P')) with
         {
-            SideToMove = white ? new White() : new Black(),
+            SideToMove = white ? Side.White : Side.Black,
             EnPassant = new EnPassantTarget { Square = Square(to) }
         };
 

@@ -2,10 +2,10 @@ namespace Chess.Tests;
 
 public sealed class BoardTests
 {
-    private static readonly Coordinate A1 = new() { File = new A(), Rank = new One() };
-    private static readonly Coordinate H8 = new() { File = new H(), Rank = new Eight() };
-    private static readonly OwnedPiece WhiteRook = new() { Side = new White(), Piece = new Rook() };
-    private static readonly OwnedPiece BlackQueen = new() { Side = new Black(), Piece = new Queen() };
+    private static readonly Coordinate A1 = new() { File = BoardFile.A, Rank = BoardRank.One };
+    private static readonly Coordinate H8 = new() { File = BoardFile.H, Rank = BoardRank.Eight };
+    private static readonly OwnedPiece WhiteRook = new() { Side = Side.White, Piece = Piece.Rook };
+    private static readonly OwnedPiece BlackQueen = new() { Side = Side.Black, Piece = Piece.Queen };
 
     [Test]
     public async Task NewBoardHasEmptyContentsAtEverySquare()
@@ -14,7 +14,7 @@ public sealed class BoardTests
 
         foreach (var coordinate in BoardCoordinates.All())
         {
-            await Assert.That(board[coordinate].Value).IsTypeOf<Empty>().And.IsNotNull();
+            await Assert.That(board[coordinate].Value).IsSameReferenceAs(SquareContent.Empty);
         }
     }
 

@@ -13,7 +13,30 @@ public union MoveResult(
     PromotionRequired,
     InvalidPromotion,
     CastlingUnavailable,
-    MoveCounterOverflow);
+    MoveCounterOverflow)
+{
+    public static SourceSquareEmpty SourceSquareEmpty { get; } = new();
+
+    public static WrongSideToMove WrongSideToMove { get; } = new();
+
+    public static FriendlyPieceOnDestination FriendlyPieceOnDestination { get; } = new();
+
+    public static InvalidMovement InvalidMovement { get; } = new();
+
+    public static PathBlocked PathBlocked { get; } = new();
+
+    public static KingCaptureNotAllowed KingCaptureNotAllowed { get; } = new();
+
+    public static KingWouldBeInCheck KingWouldBeInCheck { get; } = new();
+
+    public static PromotionRequired PromotionRequired { get; } = new();
+
+    public static InvalidPromotion InvalidPromotion { get; } = new();
+
+    public static CastlingUnavailable CastlingUnavailable { get; } = new();
+
+    public static MoveCounterOverflow MoveCounterOverflow { get; } = new();
+}
 
 public sealed record InvalidPosition
 {
@@ -22,24 +45,79 @@ public sealed record InvalidPosition
     public required int BlackKingCount { get; init; }
 }
 
-public sealed record SourceSquareEmpty;
+public sealed class SourceSquareEmpty
+{
+    internal SourceSquareEmpty()
+    {
+    }
+}
 
-public sealed record WrongSideToMove;
+public sealed class WrongSideToMove
+{
+    internal WrongSideToMove()
+    {
+    }
+}
 
-public sealed record FriendlyPieceOnDestination;
+public sealed class FriendlyPieceOnDestination
+{
+    internal FriendlyPieceOnDestination()
+    {
+    }
+}
 
-public sealed record InvalidMovement;
+public sealed class InvalidMovement
+{
+    internal InvalidMovement()
+    {
+    }
+}
 
-public sealed record PathBlocked;
+public sealed class PathBlocked
+{
+    internal PathBlocked()
+    {
+    }
+}
 
-public sealed record KingCaptureNotAllowed;
+public sealed class KingCaptureNotAllowed
+{
+    internal KingCaptureNotAllowed()
+    {
+    }
+}
 
-public sealed record KingWouldBeInCheck;
+public sealed class KingWouldBeInCheck
+{
+    internal KingWouldBeInCheck()
+    {
+    }
+}
 
-public sealed record PromotionRequired;
+public sealed class PromotionRequired
+{
+    internal PromotionRequired()
+    {
+    }
+}
 
-public sealed record InvalidPromotion;
+public sealed class InvalidPromotion
+{
+    internal InvalidPromotion()
+    {
+    }
+}
 
-public sealed record CastlingUnavailable;
+public sealed class CastlingUnavailable
+{
+    internal CastlingUnavailable()
+    {
+    }
+}
 
-public sealed record MoveCounterOverflow;
+public sealed class MoveCounterOverflow
+{
+    internal MoveCounterOverflow()
+    {
+    }
+}

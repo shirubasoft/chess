@@ -44,19 +44,19 @@ public static class MoveRules
     {
         if (position.Board[from] is not Occupied source)
         {
-            return new SourceSquareEmpty();
+            return MoveResult.SourceSquareEmpty;
         }
 
         var moving = source.Piece;
         var white = IsWhite(moving.Side);
         if (white != IsWhite(position.SideToMove))
         {
-            return new WrongSideToMove();
+            return MoveResult.WrongSideToMove;
         }
 
         if (from == to)
         {
-            return new InvalidMovement();
+            return MoveResult.InvalidMovement;
         }
 
         OwnedPiece? captured = null;
@@ -65,12 +65,12 @@ public static class MoveRules
         {
             if (IsWhite(destination.Piece.Side) == white)
             {
-                return new FriendlyPieceOnDestination();
+                return MoveResult.FriendlyPieceOnDestination;
             }
 
             if (destination.Piece.Piece is King)
             {
-                return new KingCaptureNotAllowed();
+                return MoveResult.KingCaptureNotAllowed;
             }
 
             captured = destination.Piece;
@@ -82,10 +82,10 @@ public static class MoveRules
         var promotes = pawn && BoardGeometry.Rank(to) == (white ? 7 : 0);
         if (promotion.HasValue && !promotes)
         {
-            return new InvalidPromotion();
+            return MoveResult.InvalidPromotion;
         }
 
-        EnPassantState enPassant = new NoEnPassant();
+        EnPassantState enPassant = EnPassantState.None;
         if (pawn)
         {
             var direction = white ? 1 : -1;
@@ -98,7 +98,7 @@ public static class MoveRules
                     var middle = BoardGeometry.At(BoardGeometry.File(from), BoardGeometry.Rank(from) + direction);
                     if (position.Board[middle] is Occupied)
                     {
-                        return new PathBlocked();
+                        return MoveResult.PathBlocked;
                     }
 
                     enPassant = new EnPassantTarget { Square = middle };
@@ -111,14 +111,14 @@ public static class MoveRules
                     if (BoardGeometry.Rank(from) != (white ? 4 : 3)
                         || position.EnPassant is not EnPassantTarget target || target.Square != to)
                     {
-                        return new InvalidMovement();
+                        return MoveResult.InvalidMovement;
                     }
 
                     capturedSquare = BoardGeometry.At(BoardGeometry.File(to), BoardGeometry.Rank(from));
                     if (position.Board[capturedSquare] is not Occupied adjacent
                         || adjacent.Piece.Piece is not Pawn || IsWhite(adjacent.Piece.Side) == white)
                     {
-                        return new InvalidMovement();
+                        return MoveResult.InvalidMovement;
                     }
 
                     captured = adjacent.Piece;
@@ -126,7 +126,7 @@ public static class MoveRules
             }
             else
             {
-                return new InvalidMovement();
+                return MoveResult.InvalidMovement;
             }
         }
         else
@@ -142,18 +142,18 @@ public static class MoveRules
             };
             if (!validShape)
             {
-                return new InvalidMovement();
+                return MoveResult.InvalidMovement;
             }
 
             if (moving.Piece is Bishop or Rook or Queen && !PathIsClear(position.Board, from, to))
             {
-                return new PathBlocked();
+                return MoveResult.PathBlocked;
             }
         }
 
         if (promotes && !promotion.HasValue)
         {
-            return new PromotionRequired();
+            return MoveResult.PromotionRequired;
         }
 
         var board = position.Board.Remove(from).Remove(capturedSquare);
@@ -182,12 +182,12 @@ public static class MoveRules
             || position.Board[rookFrom] is not Occupied rook || rook.Piece.Piece is not Rook
             || IsWhite(rook.Piece.Side) != white)
         {
-            return new CastlingUnavailable();
+            return MoveResult.CastlingUnavailable;
         }
 
         if (!PathIsClear(position.Board, kingFrom, rookFrom))
         {
-            return new PathBlocked();
+            return MoveResult.PathBlocked;
         }
 
         var transit = BoardGeometry.At(kingSide ? 5 : 3, rank);
@@ -195,12 +195,12 @@ public static class MoveRules
         if (IsAttacked(position.Board, kingFrom, !white)
             || IsAttacked(Place(position.Board.Remove(kingFrom), transit, king.Piece), transit, !white))
         {
-            return new KingWouldBeInCheck();
+            return MoveResult.KingWouldBeInCheck;
         }
 
         var board = position.Board.Remove(kingFrom).Remove(rookFrom);
         board = Place(Place(board, kingTo, king.Piece), transit, rook.Piece);
-        return Complete(position, board, king.Piece, kingFrom, null, kingTo, new NoEnPassant());
+        return Complete(position, board, king.Piece, kingFrom, null, kingTo, EnPassantState.None);
     }
 
     private static MoveResult Complete(
@@ -213,7 +213,7 @@ public static class MoveRules
             if (board[square] is Occupied occupied && occupied.Piece.Piece is King
                 && IsWhite(occupied.Piece.Side) == white && IsAttacked(board, square, !white))
             {
-                return new KingWouldBeInCheck();
+                return MoveResult.KingWouldBeInCheck;
             }
         }
 
@@ -221,7 +221,7 @@ public static class MoveRules
         if ((!resetClock && position.HalfmoveClock == int.MaxValue)
             || (!white && position.FullmoveNumber == int.MaxValue))
         {
-            return new MoveCounterOverflow();
+            return MoveResult.MoveCounterOverflow;
         }
 
         var whiteRights = position.WhiteCastlingRights;
@@ -230,11 +230,11 @@ public static class MoveRules
         {
             if (white)
             {
-                whiteRights = new NoCastlingRights();
+                whiteRights = CastlingRights.None;
             }
             else
             {
-                blackRights = new NoCastlingRights();
+                blackRights = CastlingRights.None;
             }
         }
         else if (moving.Piece is Rook)
@@ -264,7 +264,7 @@ public static class MoveRules
         return position with
         {
             Board = board,
-            SideToMove = white ? new Black() : new White(),
+            SideToMove = white ? Side.Black : Side.White,
             WhiteCastlingRights = whiteRights,
             BlackCastlingRights = blackRights,
             EnPassant = enPassant,
@@ -286,15 +286,15 @@ public static class MoveRules
             {
                 NoCastlingRights => rights,
                 KingSideCastlingRights => rights,
-                QueenSideCastlingRights => new NoCastlingRights(),
-                BothCastlingRights => new KingSideCastlingRights()
+                QueenSideCastlingRights => CastlingRights.None,
+                BothCastlingRights => CastlingRights.KingSide
             },
             7 => rights switch
             {
                 NoCastlingRights => rights,
-                KingSideCastlingRights => new NoCastlingRights(),
+                KingSideCastlingRights => CastlingRights.None,
                 QueenSideCastlingRights => rights,
-                BothCastlingRights => new QueenSideCastlingRights()
+                BothCastlingRights => CastlingRights.QueenSide
             },
             _ => rights
         };

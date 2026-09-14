@@ -4,8 +4,6 @@ namespace Chess;
 
 public sealed class Board
 {
-    private static readonly Empty EmptySquare = new();
-
     private readonly ImmutableDictionary<Coordinate, Occupied> _squares;
 
     public Board()
@@ -21,7 +19,7 @@ public sealed class Board
     public SquareContent this[Coordinate coordinate] =>
         _squares.TryGetValue(coordinate, out var square)
             ? square
-            : EmptySquare;
+            : SquareContent.Empty;
 
     public PlacementResult Place(Coordinate coordinate, OwnedPiece piece) =>
         _squares.TryGetValue(coordinate, out var occupied)

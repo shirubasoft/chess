@@ -1,7 +1,22 @@
 namespace Chess;
 
-public union Side(White, Black);
+public union Side(White, Black)
+{
+    public static White White { get; } = new();
 
-public sealed record White;
+    public static Black Black { get; } = new();
+}
 
-public sealed record Black;
+public sealed class White
+{
+    internal White()
+    {
+    }
+}
+
+public sealed class Black
+{
+    internal Black()
+    {
+    }
+}

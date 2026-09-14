@@ -1,19 +1,76 @@
 namespace Chess;
 
-public union BoardFile(A, B, C, D, E, F, G, H);
+public union BoardFile(A, B, C, D, E, F, G, H)
+{
+    public static A A { get; } = new();
 
-public sealed record A;
+    public static B B { get; } = new();
 
-public sealed record B;
+    public static C C { get; } = new();
 
-public sealed record C;
+    public static D D { get; } = new();
 
-public sealed record D;
+    public static E E { get; } = new();
 
-public sealed record E;
+    public static F F { get; } = new();
 
-public sealed record F;
+    public static G G { get; } = new();
 
-public sealed record G;
+    public static H H { get; } = new();
+}
 
-public sealed record H;
+public sealed class A
+{
+    internal A()
+    {
+    }
+}
+
+public sealed class B
+{
+    internal B()
+    {
+    }
+}
+
+public sealed class C
+{
+    internal C()
+    {
+    }
+}
+
+public sealed class D
+{
+    internal D()
+    {
+    }
+}
+
+public sealed class E
+{
+    internal E()
+    {
+    }
+}
+
+public sealed class F
+{
+    internal F()
+    {
+    }
+}
+
+public sealed class G
+{
+    internal G()
+    {
+    }
+}
+
+public sealed class H
+{
+    internal H()
+    {
+    }
+}

@@ -1,11 +1,40 @@
 namespace Chess;
 
-public union CastlingRights(NoCastlingRights, KingSideCastlingRights, QueenSideCastlingRights, BothCastlingRights);
+public union CastlingRights(NoCastlingRights, KingSideCastlingRights, QueenSideCastlingRights, BothCastlingRights)
+{
+    public static NoCastlingRights None { get; } = new();
 
-public sealed record NoCastlingRights;
+    public static KingSideCastlingRights KingSide { get; } = new();
 
-public sealed record KingSideCastlingRights;
+    public static QueenSideCastlingRights QueenSide { get; } = new();
 
-public sealed record QueenSideCastlingRights;
+    public static BothCastlingRights Both { get; } = new();
+}
 
-public sealed record BothCastlingRights;
+public sealed class NoCastlingRights
+{
+    internal NoCastlingRights()
+    {
+    }
+}
+
+public sealed class KingSideCastlingRights
+{
+    internal KingSideCastlingRights()
+    {
+    }
+}
+
+public sealed class QueenSideCastlingRights
+{
+    internal QueenSideCastlingRights()
+    {
+    }
+}
+
+public sealed class BothCastlingRights
+{
+    internal BothCastlingRights()
+    {
+    }
+}

@@ -1,8 +1,16 @@
 namespace Chess;
 
-public union EnPassantState(NoEnPassant, EnPassantTarget);
+public union EnPassantState(NoEnPassant, EnPassantTarget)
+{
+    public static NoEnPassant None { get; } = new();
+}
 
-public sealed record NoEnPassant;
+public sealed class NoEnPassant
+{
+    internal NoEnPassant()
+    {
+    }
+}
 
 public sealed record EnPassantTarget
 {

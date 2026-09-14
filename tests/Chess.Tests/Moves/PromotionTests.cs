@@ -13,10 +13,10 @@ public sealed class PromotionTests
     {
         PromotionPiece promotion = choice switch
         {
-            'Q' => new Queen(),
-            'R' => new Rook(),
-            'B' => new Bishop(),
-            'N' => new Knight(),
+            'Q' => PromotionPiece.Queen,
+            'R' => PromotionPiece.Rook,
+            'B' => PromotionPiece.Bishop,
+            'N' => PromotionPiece.Knight,
             _ => throw new ArgumentException("Unknown promotion.", nameof(choice))
         };
         foreach (var white in new[] { true, false })
@@ -31,11 +31,13 @@ public sealed class PromotionTests
                     pieces.Add((to, white ? 'r' : 'R'));
                 }
 
-                var position = Setup(pieces.ToArray()) with { SideToMove = white ? new White() : new Black() };
+                var position = Setup(pieces.ToArray()) with { SideToMove = white ? Side.White : Side.Black };
                 var request = new Promote { From = Square(from), To = Square(to), Piece = promotion };
 
                 var next = await Result<Position>(MoveRules.Apply(position, request));
 
+                var promoted = await Assert.That(next.Board[Square(to)].Value).IsTypeOf<Occupied>().And.IsNotNull();
+                await Assert.That(promoted.Piece.Piece.Value).IsSameReferenceAs(promotion.Value);
                 await Assert.That(At(next, to)).IsEqualTo(white ? choice : char.ToLowerInvariant(choice));
                 await Assert.That(At(next, from)).IsEqualTo('.');
                 await Assert.That(next.HalfmoveClock).IsEqualTo(0);
@@ -52,7 +54,7 @@ public sealed class PromotionTests
     {
         var position = Setup(("a1", 'K'), ("h8", 'k'), (from, white ? 'P' : 'p')) with
         {
-            SideToMove = white ? new White() : new Black()
+            SideToMove = white ? Side.White : Side.Black
         };
         var originalBoard = position.Board;
 
@@ -66,7 +68,7 @@ public sealed class PromotionTests
         {
             From = Square(from),
             To = Square(to),
-            Piece = new Knight()
+            Piece = PromotionPiece.Knight
         }));
         await Assert.That(At(next, to)).IsEqualTo(white ? 'N' : 'n');
     }
@@ -82,7 +84,7 @@ public sealed class PromotionTests
         {
             From = Square(from),
             To = Square(to),
-            Piece = new Queen()
+            Piece = PromotionPiece.Queen
         }));
     }
 }

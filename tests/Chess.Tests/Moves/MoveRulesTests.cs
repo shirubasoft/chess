@@ -20,8 +20,8 @@ public sealed class MoveRulesTests
         MoveRequest[] requests =
         [
             Move("a2", "a3"),
-            new Castle { Wing = new KingSide() },
-            new Promote { From = Square("e7"), To = Square("e8"), Piece = new Queen() }
+            new Castle { Wing = CastlingWing.KingSide },
+            new Promote { From = Square("e7"), To = Square("e8"), Piece = PromotionPiece.Queen }
         ];
 
         foreach (var request in requests)
@@ -37,10 +37,10 @@ public sealed class MoveRulesTests
     {
         var position = Setup(("a1", 'K'), ("h8", 'k'), ("b2", 'P'), ("b3", 'N'), ("g7", 'p'));
 
-        await Result<SourceSquareEmpty>(MoveRules.Apply(position, Move("c2", "c3")));
-        await Result<WrongSideToMove>(MoveRules.Apply(position, Move("g7", "g6")));
-        await Result<FriendlyPieceOnDestination>(MoveRules.Apply(position, Move("b2", "b3")));
-        await Result<InvalidMovement>(MoveRules.Apply(position, Move("b2", "b2")));
+        await Assert.That(MoveRules.Apply(position, Move("c2", "c3")).Value).IsSameReferenceAs(MoveResult.SourceSquareEmpty);
+        await Assert.That(MoveRules.Apply(position, Move("g7", "g6")).Value).IsSameReferenceAs(MoveResult.WrongSideToMove);
+        await Assert.That(MoveRules.Apply(position, Move("b2", "b3")).Value).IsSameReferenceAs(MoveResult.FriendlyPieceOnDestination);
+        await Assert.That(MoveRules.Apply(position, Move("b2", "b2")).Value).IsSameReferenceAs(MoveResult.InvalidMovement);
         await Assert.That(At(position, "b2")).IsEqualTo('P');
         await Assert.That(position.HalfmoveClock).IsEqualTo(8);
     }
@@ -64,7 +64,7 @@ public sealed class MoveRulesTests
         await Assert.That(At(next, to)).IsEqualTo(piece);
         await Assert.That(At(position, from)).IsEqualTo(piece);
         await Assert.That(At(position, to)).IsEqualTo('.');
-        await Assert.That(next.SideToMove.Value).IsTypeOf<Black>().And.IsNotNull();
+        await Assert.That(next.SideToMove.Value).IsSameReferenceAs(Side.Black);
         await Assert.That(next.HalfmoveClock).IsEqualTo(piece == 'P' ? 0 : 9);
         await Assert.That(next.FullmoveNumber).IsEqualTo(12);
     }
@@ -134,16 +134,16 @@ public sealed class MoveRulesTests
     {
         var position = Setup(("a1", 'K'), ("h8", 'k'), ("d5", 'n')) with
         {
-            SideToMove = new Black(),
+            SideToMove = Side.Black,
             EnPassant = new EnPassantTarget { Square = Square("e3") }
         };
 
         var next = await Result<Position>(MoveRules.Apply(position, Move("d5", "f4")));
 
-        await Assert.That(next.SideToMove.Value).IsTypeOf<White>().And.IsNotNull();
+        await Assert.That(next.SideToMove.Value).IsSameReferenceAs(Side.White);
         await Assert.That(next.FullmoveNumber).IsEqualTo(13);
         await Assert.That(next.HalfmoveClock).IsEqualTo(9);
-        await Assert.That(next.EnPassant.Value).IsTypeOf<NoEnPassant>().And.IsNotNull();
+        await Assert.That(next.EnPassant.Value).IsSameReferenceAs(EnPassantState.None);
     }
 
     [Test]
@@ -155,7 +155,7 @@ public sealed class MoveRulesTests
 
         var black = Setup(("a1", 'K'), ("h8", 'k'), ("g7", 'p')) with
         {
-            SideToMove = new Black(),
+            SideToMove = Side.Black,
             FullmoveNumber = int.MaxValue
         };
         await Result<MoveCounterOverflow>(MoveRules.Apply(black, Move("g7", "g6")));

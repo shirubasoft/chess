@@ -6,13 +6,13 @@ public sealed class PositionTests
     public async Task ChangingMetadataPreservesTheOriginalPosition()
     {
         var original = CreatePosition();
-        var target = new Coordinate { File = new E(), Rank = new Three() };
+        var target = new Coordinate { File = BoardFile.E, Rank = BoardRank.Three };
 
         var updated = original with
         {
-            SideToMove = new Black(),
-            WhiteCastlingRights = new KingSideCastlingRights(),
-            BlackCastlingRights = new QueenSideCastlingRights(),
+            SideToMove = Side.Black,
+            WhiteCastlingRights = CastlingRights.KingSide,
+            BlackCastlingRights = CastlingRights.QueenSide,
             EnPassant = new EnPassantTarget { Square = target },
             HalfmoveClock = 5,
             FullmoveNumber = 12
@@ -38,8 +38,8 @@ public sealed class PositionTests
     public async Task ChangingTheBoardPreservesTheOriginalPosition()
     {
         var original = CreatePosition();
-        var square = new Coordinate { File = new E(), Rank = new Two() };
-        var piece = new OwnedPiece { Side = new White(), Piece = new Pawn() };
+        var square = new Coordinate { File = BoardFile.E, Rank = BoardRank.Two };
+        var piece = new OwnedPiece { Side = Side.White, Piece = Piece.Pawn };
         var board = await Assert.That(original.Board.Place(square, piece).Value).IsTypeOf<Board>().And.IsNotNull();
 
         var updated = original with { Board = board };
@@ -96,10 +96,10 @@ public sealed class PositionTests
     private static Position CreatePosition(int halfmoveClock = 0, int fullmoveNumber = 1) => new()
     {
         Board = new Board(),
-        SideToMove = new White(),
-        WhiteCastlingRights = new BothCastlingRights(),
-        BlackCastlingRights = new NoCastlingRights(),
-        EnPassant = new NoEnPassant(),
+        SideToMove = Side.White,
+        WhiteCastlingRights = CastlingRights.Both,
+        BlackCastlingRights = CastlingRights.None,
+        EnPassant = EnPassantState.None,
         HalfmoveClock = halfmoveClock,
         FullmoveNumber = fullmoveNumber
     };
