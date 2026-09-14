@@ -15,7 +15,7 @@ internal static class Program
     }
 }
 
-public sealed class ChessWindow
+public sealed partial class ChessWindow
 {
     private readonly Gtk.ApplicationWindow window;
     private readonly GameSession session;
@@ -61,7 +61,7 @@ public sealed class ChessWindow
         status.Name = "game-status"; status.SetHalign(Gtk.Align.Start); status.AddCssClass("title-3"); left.Append(status);
         opponent.Name = "opponent-client"; opponent.SetHalign(Gtk.Align.Start); left.Append(opponent);
         board.RowHomogeneous = true; board.ColumnHomogeneous = true; board.Hexpand = true; board.Vexpand = true;
-        var boardFrame = Gtk.AspectFrame.New(0.5f, 0.5f, 1, false); boardFrame.SetChild(board); boardFrame.Vexpand = true; left.Append(boardFrame);
+        var boardFrame = Gtk.AspectFrame.New(0.5f, 0.5f, 1, false); boardFrame.SetChild(ConfigureBoardDragging()); boardFrame.Vexpand = true; left.Append(boardFrame);
         var promotionLabel = Gtk.Label.New("Promote to"); promotions.Append(promotionLabel);
         foreach (var (label, piece) in new[] { ("Queen", 'q'), ("Rook", 'r'), ("Bishop", 'b'), ("Knight", 'n') })
             promotions.Append(Action(label, "promote-" + piece, () => session.PromoteAsync(piece)));
@@ -89,7 +89,8 @@ public sealed class ChessWindow
         _ = session.PollAsync();
         if (args.Contains("--resume", StringComparer.Ordinal) && session.SavedCode.Length != 0)
             _ = session.JoinAsync(session.Server, session.SavedCode);
-        var verification = Array.IndexOf(args, "--verify-ui");
+        var recording = Array.IndexOf(args, "--record-gameplay");
+        var verification = recording >= 0 ? recording : Array.IndexOf(args, "--verify-ui");
         if (verification >= 0 && verification + 1 < args.Length)
         {
             window.OnMap += async (_, _) =>
@@ -101,7 +102,7 @@ public sealed class ChessWindow
                     {
                         "access-codes" => access.GetText(), "opponent-client" => opponent.GetText(), "move-history" => history.GetText(),
                         _ => squares[id[7..]].TooltipText ?? ""
-                    }, args[verification + 1]);
+                    }, args[verification + 1], DragInputAsync, recording >= 0);
                 Environment.ExitCode = success ? 0 : 1;
                 window.Close();
             };
@@ -129,6 +130,7 @@ public sealed class ChessWindow
 
     private void Render()
     {
+        if (boardDrag is { } drag && !session.IsCurrentDrag(drag)) CancelBoardDrag();
         status.SetText(session.Status); opponent.SetText($"Opponent: {session.Opponent}");
         message.SetText(session.Message); history.SetText(session.History);
         access.SetText(session.Access is { } a

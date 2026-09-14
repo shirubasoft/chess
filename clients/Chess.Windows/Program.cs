@@ -21,7 +21,7 @@ internal static class Program
     }
 }
 
-public sealed class ChessWindow : Window
+public sealed partial class ChessWindow : Window
 {
     private readonly GameSession session;
     private readonly TextBox server = new();
@@ -92,7 +92,8 @@ public sealed class ChessWindow : Window
             _ = session.PollAsync();
             if (args.Contains("--resume", StringComparer.Ordinal) && session.SavedCode.Length != 0)
                 await session.JoinAsync(session.Server, session.SavedCode);
-            var verification = Array.IndexOf(args, "--verify-ui");
+            var recording = Array.IndexOf(args, "--record-gameplay");
+        var verification = recording >= 0 ? recording : Array.IndexOf(args, "--verify-ui");
             if (verification >= 0 && verification + 1 < args.Length)
             {
                 var success = await NativeUiVerification.RunAsync(session, (id, text) => { if (id == "game-code") code.Text = text; else notation.Text = text; },
@@ -101,7 +102,7 @@ public sealed class ChessWindow : Window
                     {
                         "access-codes" => access.Text, "opponent-client" => opponent.Text, "move-history" => history.Text,
                         _ => AutomationProperties.GetName(squares[id[7..]])
-                    }, args[verification + 1]);
+                    }, args[verification + 1], DragInputAsync, recording >= 0);
                 var screenshot = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);
                 screenshot.Render(this);
                 var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(screenshot));
@@ -109,6 +110,7 @@ public sealed class ChessWindow : Window
                 Application.Current.Shutdown(success ? 0 : 1);
             }
         };
+        ConfigureBoardDragging();
         Render();
     }
 
@@ -150,6 +152,7 @@ public sealed class ChessWindow : Window
 
     private void Render()
     {
+        CancelStaleDrag();
         status.Text = session.Status; opponent.Text = $"Opponent: {session.Opponent}"; message.Text = session.Message; history.Text = session.History;
         access.Text = session.Access is { } a ? $"You play {a.Side} · Your code: {a.Code}"
             + (a.OpponentCode is { } invite ? $"\nOpponent code: {invite}" : "") + $"\nGame {a.GameId} · Revision {session.Snapshot?.Revision}"

@@ -135,7 +135,7 @@ try {
     if ($report.client -ne "Chess $Platform") { throw 'The report came from the wrong native client.' }
     if ([DateTimeOffset]$report.startedAt -lt $startedAt.AddSeconds(-5)) { throw 'The native verification report is stale.' }
     if ([Uri]$report.server -ne $serverUri) { throw 'The native client verified against a different server.' }
-    if (@($report.checks).Count -ne 5 -or -not $report.gameId) { throw 'The native verification report is incomplete.' }
+    if (@($report.checks).Count -ne 8 -or -not $report.gameId) { throw 'The native verification report is incomplete.' }
     Write-Host "$Platform native UI passed all $(@($report.checks).Count) crossplay checks with $Backend."
 }
 catch {

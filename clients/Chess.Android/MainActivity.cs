@@ -12,7 +12,7 @@ using Chess.Native.Testing;
 namespace Chess.Android;
 
 [Activity(Name = "org.shirubasoft.chess.MainActivity", Label = "Chess", MainLauncher = true, Exported = true, ConfigurationChanges = global::Android.Content.PM.ConfigChanges.Orientation | global::Android.Content.PM.ConfigChanges.ScreenSize)]
-public sealed class MainActivity : Activity
+public sealed partial class MainActivity : Activity
 {
     private GameSession session = null!;
     private EditText server = null!;
@@ -37,7 +37,7 @@ public sealed class MainActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        session = new GameSession("Chess Android", System.IO.Path.Combine(FilesDir!.AbsolutePath, Intent?.GetBooleanExtra("verify_ui", false) == true ? "verification-session" : "session"),
+        session = new GameSession("Chess Android", System.IO.Path.Combine(FilesDir!.AbsolutePath, (Intent?.GetBooleanExtra("verify_ui", false) == true || Intent?.GetBooleanExtra("record_gameplay", false) == true) ? "verification-session" : "session"),
             Intent?.GetStringExtra("server") ?? "http://10.0.2.2:5080/");
         var scroll = new ScrollView(this); var content = Vertical(); content.SetPadding(Dp(16), Dp(20), Dp(16), Dp(20));
         scroll.AddView(content); SetContentView(scroll);
@@ -83,7 +83,7 @@ public sealed class MainActivity : Activity
     {
         base.OnStart(); polling = new CancellationTokenSource(); _ = session.PollAsync(polling.Token);
         if (session.Access is not null) _ = session.RefreshAsync();
-        if (!verificationStarted && Intent?.GetBooleanExtra("verify_ui", false) == true)
+        if (!verificationStarted && (Intent?.GetBooleanExtra("verify_ui", false) == true || Intent?.GetBooleanExtra("record_gameplay", false) == true))
         {
             verificationStarted = true;
             _ = VerifyAsync();
@@ -103,11 +103,11 @@ public sealed class MainActivity : Activity
             {
                 "access-codes" => access.Text ?? "", "opponent-client" => opponent.Text ?? "", "move-history" => history.Text ?? "",
                 _ => squares[id[7..]].ContentDescription ?? ""
-            }, path);
+            }, path, DragInputAsync, Intent?.GetBooleanExtra("record_gameplay", false) == true);
         global::Android.Util.Log.Info("ChessVerification", success ? "PASS" : "FAIL");
     }
 
-    protected override void OnStop() { polling?.Cancel(); polling?.Dispose(); polling = null; base.OnStop(); }
+    protected override void OnStop() { CancelBoardDrag(); touchSource = null; polling?.Cancel(); polling?.Dispose(); polling = null; base.OnStop(); }
     protected override void OnDestroy() { session.Changed -= Changed; session.Dispose(); base.OnDestroy(); }
     private void Changed() => RunOnUiThread(Render);
 
@@ -141,6 +141,7 @@ public sealed class MainActivity : Activity
     private void Render()
     {
         if (IsDestroyed) return;
+        if (boardDrag is { } drag && !session.IsCurrentDrag(drag)) CancelBoardDrag();
         status.Text = session.Status; opponent.Text = $"Opponent: {session.Opponent}"; history.Text = session.History; message.Text = session.Message;
         access.Text = session.Access is { } a ? $"You play {a.Side}\nYour code: {a.Code}"
             + (a.OpponentCode is { } invite ? $"\nOpponent code: {invite}" : "") + $"\nRevision {session.Snapshot?.Revision}"
@@ -166,6 +167,7 @@ public sealed class MainActivity : Activity
                     var square = rendered[row * 8 + column]; var button = new Button(this) { TextSize = 28 };
                     button.SetPadding(0, 0, 0, 0); button.SetMinimumWidth(0); button.SetMinimumHeight(0); button.SetAllCaps(false);
                     Identify(button, "square_" + square.Name); button.Click += async (_, _) => await session.SelectSquareAsync(square.Name);
+                    ConfigureSquareDragging(button, square.Name);
                     line.AddView(button, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MatchParent, 1)); squares.Add(square.Name, button);
                 }
             }
