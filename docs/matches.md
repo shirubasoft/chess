@@ -45,8 +45,8 @@ snapshot. Persist that snapshot alongside the accepted events when using an
 edited setup. Replay applies the recorded finish decision rather than searching
 for a new outcome after each move. Events carry their ply and previous repetition
 key, which reject repeated, reordered, or mismatched predecessors. Replay also
-validates the recorded move and rejects any event after a finish. Persistence and
-wire formats belong to the application boundary; replay consumes domain events.
+validates the recorded move and rejects any event after a finish. Use the
+[JSON options](json.md) to persist and restore the initial position and events.
 
 The finish decision uses [position outcomes](position-outcomes.md) and
 [repetition history](repetition.md). A recognized dead position finishes

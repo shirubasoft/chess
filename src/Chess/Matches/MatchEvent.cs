@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Chess;
 
 public union MatchEvent(MovePlayed, DrawClaimed);
@@ -16,6 +18,7 @@ public sealed class PlayContinues
 
 public sealed class MovePlayed
 {
+    [JsonConstructor]
     internal MovePlayed(int ply, PositionKey previousKey, MoveRequest move, MatchProgress progress)
     {
         Ply = ply;
@@ -35,6 +38,7 @@ public sealed class MovePlayed
 
 public sealed class DrawClaimed
 {
+    [JsonConstructor]
     internal DrawClaimed(int ply, PositionKey previousKey, DrawClaimReason reason, DrawClaimTiming timing)
     {
         Ply = ply;

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 
 namespace Chess;
 
@@ -15,6 +16,15 @@ public sealed class Board
     {
         _squares = squares;
     }
+
+    [JsonConstructor]
+    internal Board(ImmutableArray<KeyValuePair<Coordinate, Occupied>> squares)
+        : this(squares.ToImmutableDictionary())
+    {
+    }
+
+    [JsonInclude]
+    internal ImmutableArray<KeyValuePair<Coordinate, Occupied>> Squares => _squares.ToImmutableArray();
 
     public SquareContent this[Coordinate coordinate] =>
         _squares.TryGetValue(coordinate, out var square)
