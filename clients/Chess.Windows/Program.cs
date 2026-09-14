@@ -96,6 +96,7 @@ public sealed partial class ChessWindow : Window
         var verification = recording >= 0 ? recording : Array.IndexOf(args, "--verify-ui");
             if (verification >= 0 && verification + 1 < args.Length)
             {
+                using var inputLog = BeginVerificationInputLog(args[verification + 1]);
                 var success = await NativeUiVerification.RunAsync(session, (id, text) => { if (id == "game-code") code.Text = text; else notation.Text = text; },
                     id => (id.StartsWith("square-", StringComparison.Ordinal) ? squares[id[7..]] : namedCommands[id]).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)),
                     id => id switch
@@ -103,6 +104,7 @@ public sealed partial class ChessWindow : Window
                         "access-codes" => access.Text, "opponent-client" => opponent.Text, "move-history" => history.Text,
                         _ => AutomationProperties.GetName(squares[id[7..]])
                     }, args[verification + 1], DragInputAsync, recording >= 0);
+                verificationInputLog = null;
                 var screenshot = new RenderTargetBitmap((int)ActualWidth, (int)ActualHeight, 96, 96, PixelFormats.Pbgra32);
                 screenshot.Render(this);
                 var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(screenshot));
