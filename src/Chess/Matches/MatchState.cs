@@ -38,7 +38,8 @@ public sealed record MatchDrawn
 
 public enum WinReason
 {
-    Checkmate
+    Checkmate,
+    Resignation
 }
 
 public enum DrawReason
@@ -48,5 +49,6 @@ public enum DrawReason
     ThreefoldRepetition,
     FivefoldRepetition,
     FiftyMoveRule,
-    SeventyFiveMoveRule
+    SeventyFiveMoveRule,
+    ResignationWithoutMatingMaterial
 }

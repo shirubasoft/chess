@@ -27,3 +27,12 @@ queries do not search future move trees.
 starting position, ordinary play, and unsupported dead configurations return
 this case. Locked pawn structures and other dead positions outside the listed
 cases require separate adjudication for complete Article 5.2.2 support.
+
+Resignation checks the opponent's ability to mate using a side-specific material
+check. It recognizes a bare king; a lone knight when the resigning side has only
+a king and queens; and bishops confined to one square color when all bishops on
+the board share that color and there are no pawns or knights. Enemy pieces can
+help form a mating net, so a lone minor piece is not always insufficient. For
+example, a lone knight can mate a king with a rook through cooperative play.
+The same limitation on complex positions applies: this material check does not
+prove every case where one side can never mate.
