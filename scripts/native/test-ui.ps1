@@ -9,6 +9,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot 'diagnostics.ps1')
+$runStartedAt = [DateTimeOffset]::UtcNow
 Set-Location (Join-Path $PSScriptRoot '../..')
 $artifactPath = [IO.Path]::GetFullPath($ArtifactDirectory)
 [IO.Directory]::CreateDirectory($artifactPath) | Out-Null
@@ -66,7 +68,9 @@ try {
         }
         # Keep dashboard tokens and resource configuration out of logs and uploaded artifacts.
         $startup = & aspire start --apphost $apphost --isolated --format Json --non-interactive --nologo -- "--Parameters:backend=$Backend" --Chess:Ephemeral=true 2>&1
-        if ($LASTEXITCODE -ne 0) { throw 'Aspire could not start the native verification server.' }
+        $startupExitCode = $LASTEXITCODE
+        Write-NativeDiagnostic (Join-Path $artifactPath 'aspire-startup.log') ($startup -join "`n")
+        if ($startupExitCode -ne 0) { throw "Aspire could not start the native verification server (exit $startupExitCode). Inspect the Aspire diagnostic artifacts." }
     }
     Invoke-Checked aspire @('wait', 'server', '--apphost', $apphost, '--timeout', '180', '--non-interactive', '--nologo')
     $description = & aspire describe --apphost $apphost --format Json --non-interactive --nologo
@@ -133,6 +137,13 @@ try {
     if ([Uri]$report.server -ne $serverUri) { throw 'The native client verified against a different server.' }
     if (@($report.checks).Count -ne 5 -or -not $report.gameId) { throw 'The native verification report is incomplete.' }
     Write-Host "$Platform native UI passed all $(@($report.checks).Count) crossplay checks with $Backend."
+}
+catch {
+    $verificationFailure = $_
+    Write-NativeDiagnostic (Join-Path $artifactPath 'verification-failure.log') ($verificationFailure | Out-String)
+    try { Save-NativeFailureDiagnostics $artifactPath $apphost $runStartedAt }
+    catch { Write-Warning "Could not retain all Aspire diagnostics: $($_.Exception.Message)" }
+    throw $verificationFailure
 }
 finally {
     if ($Platform -eq 'Linux' -and -not (Test-Path $screenshotPath)) {
