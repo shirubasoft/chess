@@ -1,10 +1,10 @@
-using System.Text;
 using System.Text.Json;
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using Chess.Client;
 using Chess.Contracts;
 using Terminal.Gui.App;
+using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -47,7 +47,7 @@ public sealed partial class ChessWindow : Window
     private readonly Label game = new() { X = 0, Y = 3, Width = Dim.Fill(), Height = 1 };
     private readonly Label players = new() { X = 0, Y = 4, Width = Dim.Fill(), Height = 1 };
     private readonly Label invitation = new() { X = 0, Y = 5, Width = Dim.Fill(), Height = 1 };
-    private readonly Label board = new() { X = 0, Y = 6, Width = 32, Height = 11 };
+    private readonly ChessBoardView board = new() { X = 0, Y = 6 };
     private readonly ListView history = new() { X = 34, Y = 7, Width = Dim.Fill(), Height = 10 };
     private readonly TextField move = new() { X = 6, Y = 17, Width = 22 };
     private readonly TextField joinCode = new() { X = 34, Y = 1, Width = 25, Secret = true };
@@ -72,6 +72,9 @@ public sealed partial class ChessWindow : Window
             joinCode.Text = "";
         });
         Add(game, players, invitation, board, new Label { Text = "Move history", X = 34, Y = 6 }, history);
+        Add(new Label { Text = "Drag a piece to move, or enter SAN / UCI below.", X = 0, Y = 16, Width = Dim.Fill() });
+        board.Feedback += SetStatus;
+        board.MoveRequested += PlayBoardMove;
         Add(new Label { Text = "Move", X = 0, Y = 17 }, move);
         AddButton("_Play", 29, 17, PlayAsync);
         move.Accepted += (_, _) => Start(PlayAsync);
@@ -107,6 +110,7 @@ public sealed partial class ChessWindow : Window
     {
         if (busy) return;
         busy = true;
+        board.SetGame(context.Session.Access, busy: true);
         foreach (var button in operations) button.Enabled = false;
         SetStatus("Connecting...");
         try { await operation(lifetime.Token); SetStatus("Saved. You can leave and resume with this session or your side's code."); }
@@ -137,6 +141,34 @@ public sealed partial class ChessWindow : Window
         var snapshot = await context.MoveAsync(access, access.Snapshot, text, notation, null, token);
         await SaveAsync(access with { Snapshot = snapshot }, token);
         move.Text = "";
+    }
+
+    private void PlayBoardMove(GameAccess access, string[] legalMoves)
+    {
+        if (busy) return;
+        var selected = legalMoves[0];
+        if (legalMoves.Length > 1)
+        {
+            var choice = MessageBox.Query(application, "Promote pawn", "Choose the promoted piece.", "Queen ♕", "Rook ♖", "Bishop ♗", "Knight ♘", "Cancel");
+            if (choice is not { } index || index is < 0 or > 3) { SetStatus("Promotion cancelled."); return; }
+            selected = legalMoves.Single(value => value[^1] == "qrbn"[index]);
+        }
+        Start(async token =>
+        {
+            var snapshot = await context.MoveAsync(access, access.Snapshot, selected, MoveNotation.Uci, null, token);
+            await SaveAsync(access with { Snapshot = snapshot }, token);
+        });
+    }
+
+    protected override bool OnKeyDown(Key key)
+    {
+        if (key == Key.Esc && board.IsDragging)
+        {
+            board.CancelDrag();
+            SetStatus("Move cancelled.");
+            return true;
+        }
+        return base.OnKeyDown(key);
     }
     private async Task ActionAsync(GameAction action, CancellationToken token)
     {
@@ -172,9 +204,9 @@ public sealed partial class ChessWindow : Window
 
     private void Draw()
     {
+        board.SetGame(context.Session.Access, busy);
         if (context.Session.Access is not { } access)
         {
-            board.Text = RenderBoard(Chess.Position.Initial, PlayerSide.White);
             game.Text = "No current game";
             players.Text = "White: waiting  |  Black: waiting";
             invitation.Text = "Share the opponent code after creating a game.";
@@ -186,30 +218,12 @@ public sealed partial class ChessWindow : Window
         players.Text = $"White: {snapshot.White.ClientName ?? "waiting"} | Black: {snapshot.Black.ClientName ?? "waiting"}";
         invitation.Text = access.OpponentCode is { } code && snapshot.Status == GameStatus.Waiting
             ? $"Share opponent code: {code}" : snapshot.DrawOfferedBy is { } side ? $"{side} offered a draw." : "Your side's code is stored in your private session file.";
-        board.Text = RenderBoard(ChessClient.PositionOf(snapshot), access.Side);
         history.SetSource(new ObservableCollection<string>(snapshot.Moves.Select(entry => $"{entry.Ply,3}. {entry.Side,-5} {entry.San}")));
     }
 
     public static string StatusText(GameSnapshot snapshot) => snapshot.Result is { } result
         ? result.Winner is { } winner ? $"{winner} wins: {result.Reason}" : $"Draw: {result.Reason}"
         : snapshot.Status == GameStatus.Waiting ? "Waiting for an opponent" : $"{snapshot.SideToMove} to move";
-
-    public static string RenderBoard(Chess.Position position, PlayerSide perspective)
-    {
-        var fen = Chess.Notation.Fen.Format(position).Split(' ')[0];
-        var ranks = fen.Split('/').Select(rank => string.Concat(rank.Select(symbol => char.IsAsciiDigit(symbol) ? new string('.', symbol - '0') : symbol.ToString()))).ToArray();
-        var text = new StringBuilder("   a  b  c  d  e  f  g  h\n");
-        if (perspective == PlayerSide.Black) text = new StringBuilder("   h  g  f  e  d  c  b  a\n");
-        foreach (var rankIndex in Enumerable.Range(0, 8))
-        {
-            var row = perspective == PlayerSide.White ? rankIndex : 7 - rankIndex;
-            text.Append(8 - row).Append("  ");
-            var pieces = perspective == PlayerSide.White ? ranks[row] : new string(ranks[row].Reverse().ToArray());
-            text.AppendJoin("  ", pieces.ToCharArray()).Append("  ").Append(8 - row).AppendLine();
-        }
-        text.AppendLine("White: A-Z | Black: a-z");
-        return text.ToString();
-    }
 
     protected override void Dispose(bool disposing)
     {
