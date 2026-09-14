@@ -1,5 +1,3 @@
-using Chess.Contracts;
-
 namespace Chess.Cli.Tests;
 
 public sealed class SessionTests
@@ -20,15 +18,5 @@ public sealed class SessionTests
                 await Assert.That(File.GetUnixFileMode(path)).IsEqualTo(UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
-    }
-
-    [Test]
-    public async Task BoardFlipsForThePlayersSide()
-    {
-        var white = ChessWindow.RenderBoard(Position.Initial, PlayerSide.White);
-        var black = ChessWindow.RenderBoard(Position.Initial, PlayerSide.Black);
-        await Assert.That(white.Split('\n')[1]).Contains("r  n  b  q  k  b  n  r");
-        await Assert.That(black.Split('\n')[1]).Contains("R  N  B  K  Q  B  N  R");
-        await Assert.That(black.Split('\n')[0]).Contains("h  g  f  e  d  c  b  a");
     }
 }

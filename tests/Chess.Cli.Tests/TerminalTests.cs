@@ -34,7 +34,10 @@ public sealed class TerminalTests
             await Assert.That(process.ExitCode).IsEqualTo(0);
             var rendered = Regex.Replace(await output, "\u001b\\[[0-9;]*m", "");
             await Assert.That(rendered).Contains("Chess CLI");
-            await Assert.That(rendered).Contains("White: A-Z | Black: a-z");
+            await Assert.That(rendered).Contains("♜");
+            await Assert.That(rendered).Contains("♙");
+            await Assert.That(rendered).Contains("┌");
+            await Assert.That(rendered).Contains("Drag a piece");
             await Assert.That(rendered).Contains("Claim fifty moves");
             await Assert.That(rendered).Contains("Move history");
             await Assert.That(await errors).IsEmpty();
@@ -43,7 +46,9 @@ public sealed class TerminalTests
     }
 
     [Test, RequiresLinuxTerminal, RequiresChessServer]
-    public async Task KeyboardMoveCrossplaysAndReceivesTheOpponentsMove()
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task KeyboardOrMouseMoveCrossplaysAndReceivesTheOpponentsMove(bool drag)
     {
         using var cli = new CliProcess();
         var access = (await cli.RunAsync("create")).Read<GameAccess>();
@@ -66,7 +71,9 @@ public sealed class TerminalTests
         try
         {
             await ready.Task.WaitAsync(deadline.Token);
-            await process.StandardInput.WriteAsync("\t\t\t\t\te4\r");
+            await process.StandardInput.WriteAsync(drag
+                ? "\u001b[<0;18;15M\u001b[<32;18;14M\u001b[<32;18;13M\u001b[<0;18;13m"
+                : "\t\t\t\t\te4\r");
             await process.StandardInput.FlushAsync();
             GameSnapshot snapshot;
             do
@@ -102,7 +109,7 @@ public sealed class TerminalTests
         while ((count = await reader.ReadAsync(buffer)) > 0)
         {
             text.Append(buffer, 0, count);
-            if (!ready.Task.IsCompleted && text.ToString().Contains("White: A-Z", StringComparison.Ordinal)) ready.TrySetResult();
+            if (!ready.Task.IsCompleted && text.ToString().Contains("Drag a piece", StringComparison.Ordinal)) ready.TrySetResult();
         }
         return text.ToString();
     }

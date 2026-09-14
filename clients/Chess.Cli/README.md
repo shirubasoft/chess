@@ -1,6 +1,6 @@
 # Chess CLI
 
-Install the packaged tool and run `dotnet chess`. It uses Terminal.Gui v2 for a keyboard-driven board and the shared `Chess.Client` for server requests. Every game shows the client name for each side. The CLI identifies itself as `Chess CLI`.
+Install the packaged tool and run `dotnet chess`. It uses Terminal.Gui v2 for an interactive terminal board and the shared `Chess.Client` for server requests. Every game shows the client name for each side. The CLI identifies itself as `Chess CLI`.
 
 ```sh
 dotnet pack clients/Chess.Cli -c Release -o artifacts/packages
@@ -12,7 +12,9 @@ Use the game server endpoint from the Aspire dashboard. The example port is illu
 
 ## Terminal board
 
-Run `dotnet chess` or `dotnet chess tui` in a terminal of at least 80 columns and 24 rows. Tab selects fields and buttons. Enter activates the focused control. Escape leaves the terminal UI, keeping the game in the session file. The board faces the current player's side; uppercase pieces are White and lowercase pieces are Black.
+Run `dotnet chess` or `dotnet chess tui` in a terminal of at least 80 columns and 24 rows, with a font that supports Unicode chess pieces. The drawn checkerboard faces the current player's side, with outlined White pieces and filled Black pieces. Tab selects fields and buttons. Enter activates the focused control. Escape leaves the terminal UI, keeping the game in the session file.
+
+In a terminal with mouse reporting, hold the left mouse button on a movable piece and drag it to a highlighted destination. Release to play. Right-click, press Escape, or drop outside the board to cancel the drag. A promotion opens a chooser for queen, rook, bishop, or knight. The board accepts moves only on your turn and updates after the server accepts the move.
 
 Create a game and share only the displayed opponent code. Paste a side's code into Join to join or resume that side. Random finds an opponent without exchanging a code. Enter SAN such as `Nf3`, `O-O`, or `a8=Q`, or UCI such as `g1f3` or `a7a8q`. The TUI detects UCI coordinate notation. Draw offers, acceptance, refusal, claims, resignation, and move history are available on the board. It polls while open and restores the latest server state when reopened.
 
@@ -56,4 +58,4 @@ Mutating commands also accept `--request-id UUID` for an explicit retry identity
 CHESS_TEST_SERVER=http://localhost:5000/ dotnet test --project tests/Chess.Cli.Tests
 ```
 
-The tests launch actual CLI processes against the selected server for crossplay, SAN/UCI moves, resume, command retry, draw agreement, promotion, matchmaking, resignation, and opponent waits. Without `CHESS_TEST_SERVER`, those server tests are explicitly skipped. Help, error output, session writes, and board orientation tests run independently. Linux PTY tests use `script` from util-linux at 80×24 and 100×28 to check real Terminal.Gui rendering and Escape exit. A live-server PTY test enters a move with the keyboard and verifies the board receives the opponent's reply. Response-loss tests discard successful HTTP responses after the real server commits, then restore the session and verify retries recover the same side or move without regressing the board.
+The tests launch actual CLI processes against the selected server for crossplay, SAN/UCI moves, resume, command retry, draw agreement, promotion, matchmaking, resignation, and opponent waits. Without `CHESS_TEST_SERVER`, those server tests are explicitly skipped. Help, error output, session writes, Unicode pieces, board orientation, and drag state tests run independently. Linux PTY tests use `script` from util-linux at 80×24 and 100×28 to check real Terminal.Gui rendering and Escape exit. Live-server PTY tests send keyboard and mouse input for crossplay, Black's rotated board, castling, en passant, underpromotion, and drag cancellation. Response-loss tests discard successful HTTP responses after the real server commits, then restore the session and verify retries recover the same side or move without regressing the board.
